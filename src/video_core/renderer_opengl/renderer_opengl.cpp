@@ -556,7 +556,11 @@ void RendererOpenGL::BeginBatch() {
         } else {
             const char * vertex = PICABinToGLSL(Pica::VertexShader::GetShaderBinary().data(), Pica::VertexShader::GetSwizzlePatterns().data()).c_str();
             glslopt_shader* shader = glslopt_optimize(optimizer_ctx,kGlslOptShaderVertex,vertex,0);
-            g_cur_shader = ShaderUtil::LoadShaders(glslopt_get_output(shader), GLShaders::g_fragment_shader_hw);
+            if(glslopt_get_status(shader)){
+                g_cur_shader = ShaderUtil::LoadShaders(glslopt_get_output(shader), GLShaders::g_fragment_shader_hw);
+            }else{
+                g_cur_shader = ShaderUtil::LoadShaders(vertex, GLShaders::g_fragment_shader_hw);
+            }
             glslopt_shader_delete(shader);
             g_shader_cache.insert(std::pair<u32, GLuint>(Pica::registers.vs_main_offset, g_cur_shader));
         }
