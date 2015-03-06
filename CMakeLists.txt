@@ -184,6 +184,9 @@ add_subdirectory(${INI_PREFIX})
 
 include_directories(externals/nihstro/include)
 
+include_directories(externals/glsl-optimizer/src/glsl)
+add_subdirectory(externals/glsl-optimizer)
+
 # process subdirectories
 if(ENABLE_QT)
     include_directories(externals/qhexedit)
