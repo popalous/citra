@@ -17,6 +17,12 @@
 
 #include <algorithm>
 
+//EXTENSION DEFINITIONS
+#define RGBA32I_EXT 0x8D82
+#define RED_INTEGER_EXT 0x8D94
+#define RGBA_INTEGER_EXT 0x8D99
+//END EXTENSION DEFINITIONS
+
 std::map<u32, GLuint> g_tex_cache;
 
 GLuint g_cur_shader = -1;
@@ -214,22 +220,31 @@ void RendererOpenGL::InitOpenGLObjects() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
     glBindTexture(GL_TEXTURE_2D, 0);
-
+    
     // Hardware renderer setup
     hw_program_id = ShaderUtil::LoadShaders(GLShaders::g_vertex_shader_hw, GLShaders::g_fragment_shader_hw);
-    attrib_v = glGetAttribLocation(hw_program_id, "v");
-
+    attrib_v[0] = glGetAttribLocation(hw_program_id, "v0");
+    attrib_v[1] = glGetAttribLocation(hw_program_id, "v1");
+    attrib_v[2] = glGetAttribLocation(hw_program_id, "v2");
+    attrib_v[3] = glGetAttribLocation(hw_program_id, "v3");
+    attrib_v[4] = glGetAttribLocation(hw_program_id, "v4");
+    attrib_v[5] = glGetAttribLocation(hw_program_id, "v5");
+    attrib_v[6] = glGetAttribLocation(hw_program_id, "v6");
+    attrib_v[7] = glGetAttribLocation(hw_program_id, "v7");
+    
     uniform_alphatest_func = glGetUniformLocation(hw_program_id, "alphatest_func");
     uniform_alphatest_ref = glGetUniformLocation(hw_program_id, "alphatest_ref");
 
-    uniform_tex = glGetUniformLocation(hw_program_id, "tex");
+    uniform_tex = glGetUniformLocation(hw_program_id, "tex0");
+    uniform_tex1 = glGetUniformLocation(hw_program_id, "tex1");
+    uniform_tex2 = glGetUniformLocation(hw_program_id, "tex2");
     uniform_tevs = glGetUniformLocation(hw_program_id, "tevs");
     uniform_out_maps = glGetUniformLocation(hw_program_id, "out_maps");
 
     glUniform1i(uniform_tex, 0);
-    glUniform1i(uniform_tex + 1, 1);
-    glUniform1i(uniform_tex + 2, 2);
-
+    glUniform1i(uniform_tex1, 1);
+    glUniform1i(uniform_tex2, 2);
+    
     glGenBuffers(1, &hw_vertex_buffer_handle);
 
     // Generate VAO
@@ -242,8 +257,10 @@ void RendererOpenGL::InitOpenGLObjects() {
     glUseProgram(hw_program_id);
 
     for (int i = 0; i < 8; i++) {
-        glVertexAttribPointer(attrib_v + i, 4, GL_FLOAT, GL_FALSE, 8 * 4 * sizeof(float), (GLvoid*)(i * 4 * sizeof(float)));
-        glEnableVertexAttribArray(attrib_v + i);
+        if(attrib_v[i] != -1){
+            glVertexAttribPointer(attrib_v[i], 4, GL_FLOAT, GL_FALSE, 8 * 4 * sizeof(float), (GLvoid*)(i * 4 * sizeof(float)));
+            glEnableVertexAttribArray(attrib_v[i]);
+        }
     }
 
     glGenFramebuffers(2, hw_framebuffers);
@@ -330,7 +347,7 @@ void RendererOpenGL::ConfigureHWFramebuffer(int fb_index)
 
     // Configure framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, hw_framebuffers[fb_index]);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textures[fb_index].handle, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D/*textures[fb_index].gl_format*/, textures[fb_index].handle, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, hw_framedepthbuffers[fb_index]);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -549,7 +566,14 @@ void RendererOpenGL::BeginBatch() {
         glUseProgram(g_cur_shader);
 
         // TODO: probably a bunch of redundant stuff in here
-        attrib_v = glGetAttribLocation(g_cur_shader, "v");
+        attrib_v[0] = glGetAttribLocation(hw_program_id, "v0");
+        attrib_v[1] = glGetAttribLocation(hw_program_id, "v1");
+        attrib_v[2] = glGetAttribLocation(hw_program_id, "v2");
+        attrib_v[3] = glGetAttribLocation(hw_program_id, "v3");
+        attrib_v[4] = glGetAttribLocation(hw_program_id, "v4");
+        attrib_v[5] = glGetAttribLocation(hw_program_id, "v5");
+        attrib_v[6] = glGetAttribLocation(hw_program_id, "v6");
+        attrib_v[7] = glGetAttribLocation(hw_program_id, "v7");
 
         uniform_c = glGetUniformLocation(g_cur_shader, "c");
         uniform_b = glGetUniformLocation(g_cur_shader, "b");
@@ -558,21 +582,26 @@ void RendererOpenGL::BeginBatch() {
         uniform_alphatest_func = glGetUniformLocation(g_cur_shader, "alphatest_func");
         uniform_alphatest_ref = glGetUniformLocation(g_cur_shader, "alphatest_ref");
 
-        uniform_tex = glGetUniformLocation(g_cur_shader, "tex");
+        uniform_tex = glGetUniformLocation(g_cur_shader, "tex0");
+        uniform_tex1 = glGetUniformLocation(hw_program_id, "tex1");
+        uniform_tex2 = glGetUniformLocation(hw_program_id, "tex2");
         uniform_tevs = glGetUniformLocation(g_cur_shader, "tevs");
         uniform_out_maps = glGetUniformLocation(g_cur_shader, "out_maps");
 
         glUniform1i(uniform_tex, 0);
-        glUniform1i(uniform_tex + 1, 1);
-        glUniform1i(uniform_tex + 2, 2);
+        glUniform1i(uniform_tex1, 1);
+        glUniform1i(uniform_tex2, 2);
+        
 
         for (int i = 0; i < 8; i++) {
-            glVertexAttribPointer(attrib_v + i, 4, GL_FLOAT, GL_FALSE, 8 * 4 * sizeof(float), (GLvoid*)(i * 4 * sizeof(float)));
-            glEnableVertexAttribArray(attrib_v + i);
+            if(attrib_v[i] != -1){
+                glVertexAttribPointer(attrib_v[i], 4, GL_FLOAT, GL_FALSE, 8 * 4 * sizeof(float), (GLvoid*)(i * 4 * sizeof(float)));
+                glEnableVertexAttribArray(attrib_v[i]);
+            }
         }
     //}
 #endif
-
+    int out_maps[7];
     for (int i = 0; i < 7; ++i) {
         const auto& output_register_map = Pica::registers.vs_output_attributes[i];
 
@@ -595,7 +624,8 @@ void RendererOpenGL::BeginBatch() {
     for (int i = 0; i < 6; i++) {
         glUniform4iv(uniform_tevs + i, 1, (GLint *)(&tev_stages[i]));
     }
-
+    
+    
     if (Pica::registers.output_merger.alpha_test.enable.Value()) {
         glUniform1i(uniform_alphatest_func, Pica::registers.output_merger.alpha_test.func.Value());
         glUniform1f(uniform_alphatest_ref, Pica::registers.output_merger.alpha_test.ref.Value() / 255.0f);

@@ -12,9 +12,16 @@
 
 #include "common/string_util.h"
 
-const char g_glsl_shader_header[] = R"(#version 150
+const char g_glsl_shader_header[] = R"(#version 130
 
-in vec4 v[8];
+in vec4 v0;
+in vec4 v1;
+in vec4 v2;
+in vec4 v3;
+in vec4 v4;
+in vec4 v5;
+in vec4 v6;
+in vec4 v7;
 
 out vec4 o[7];
 
@@ -27,6 +34,26 @@ uniform int i[4];
 vec4 r[16];
 ivec4 idx;
 
+vec4 getV(int index){
+    switch(index){
+        case 0:
+            return v0;
+        case 1:
+            return v1;
+        case 2:
+            return v2;
+        case 3:
+            return v3;
+        case 4:
+            return v4;
+        case 5:
+            return v5;
+        case 6:
+            return v6;
+        case 7:
+            return v7;
+    }   
+}
 )";
 
 class IfElseData
@@ -167,7 +194,7 @@ std::string RegTxtSrc(nihstro::Instruction instr, bool is_mad, bool is_inverted,
 
     if (v < 0x80) {
         if (v < 0x10) {
-            sprintf(reg_text, "v[%d%s]", v & 0xF, index_string);
+            sprintf(reg_text, "getV(%d%s)", v & 0xF, index_string);
         } else if (v < 0x20) {
             sprintf(reg_text, "r[%d%s]", v - 0x10, index_string);
         } else if (v < 0x80) {

@@ -148,8 +148,8 @@ GRenderWindow::GRenderWindow(QWidget* parent) : QWidget(parent), emu_thread(this
 
     // TODO: One of these flags might be interesting: WA_OpaquePaintEvent, WA_NoBackground, WA_DontShowOnScreen, WA_DeleteOnClose
     QGLFormat fmt;
-    fmt.setVersion(3,2);
-    fmt.setProfile(QGLFormat::CoreProfile);
+    fmt.setVersion(3,0);
+    //fmt.setProfile(QGLFormat::CoreProfile);//requires opengl 3.2
     // Requests a forward-compatible context, which is required to get a 3.2+ context on OS X
     fmt.setOption(QGL::NoDeprecatedFunctions);
 

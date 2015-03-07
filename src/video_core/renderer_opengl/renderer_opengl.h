@@ -6,7 +6,7 @@
 
 #include <array>
 
-#include "generated/gl_3_2_core.h"
+#include "generated/gl_3_0_core.h"
 
 #include "common/math_util.h"
 #include "video_core/math.h"
@@ -110,7 +110,7 @@ private:
     GLuint hw_framebuffers[2];
     GLuint hw_framedepthbuffers[2];
     // Hardware vertex shader
-    GLuint attrib_v;
+    GLuint attrib_v[8];
     GLuint uniform_c;
     GLuint uniform_b;
     GLuint uniform_i;
@@ -118,6 +118,8 @@ private:
     GLuint uniform_alphatest_func;
     GLuint uniform_alphatest_ref;
     GLuint uniform_tex;
+    GLuint uniform_tex1;
+    GLuint uniform_tex2;
     GLuint uniform_tevs;
     GLuint uniform_out_maps;
     GLuint uniform_tex_envs;

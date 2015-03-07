@@ -7,7 +7,7 @@
 namespace GLShaders {
 
 const char g_vertex_shader[] = R"(
-#version 150 core
+#version 130
 
 in vec2 vert_position;
 in vec2 vert_tex_coord;
@@ -30,7 +30,7 @@ void main() {
 )";
 
 const char g_fragment_shader[] = R"(
-#version 150 core
+#version 130
 
 in vec2 frag_tex_coord;
 out vec4 color;
@@ -43,22 +43,29 @@ void main() {
 )";
 
 const char g_vertex_shader_hw[] = R"(
-#version 150 core
+#version 130
 
-in vec4 v[8];
+in vec4 v0;
+in vec4 v1;
+in vec4 v2;
+in vec4 v3;
+in vec4 v4;
+in vec4 v5;
+in vec4 v6;
+in vec4 v7;
 out vec4 o[7];
 
 uniform int out_maps[7];
 
 void main() {
-    o[out_maps[2]] = v[1];
-    o[out_maps[3]] = v[2];
-    gl_Position = v[0];
+    o[out_maps[2]] = v1;
+    o[out_maps[3]] = v2;
+    gl_Position = v0;
 }
 )";
 
 const char g_fragment_shader_hw[] = R"(
-#version 150 core
+#version 130
 
 in vec4 o[7];
 out vec4 color;
@@ -66,7 +73,9 @@ out vec4 color;
 uniform int alphatest_func;
 uniform float alphatest_ref;
 
-uniform sampler2D tex[3];
+uniform sampler2D tex0;
+uniform sampler2D tex1;
+uniform sampler2D tex2;
 uniform ivec4 tevs[6];
 uniform int out_maps[7];
 
@@ -81,13 +90,13 @@ vec4 GetSource(int source) {
         return o[out_maps[2]];
     }
     else if (source == 3) {
-        return texture(tex[0], o[out_maps[3]].xy);
+        return texture(tex0, o[out_maps[3]].xy);
     }
     else if (source == 4) {
-        return texture(tex[1], o[out_maps[3]].xy);
+        return texture(tex1, o[out_maps[3]].xy);
     }
     else if (source == 5) {
-        return texture(tex[2], o[out_maps[3]].xy);
+        return texture(tex2, o[out_maps[3]].xy);
     }
     else if (source == 6) {
         // TODO: no 4th texture?
