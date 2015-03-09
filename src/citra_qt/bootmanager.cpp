@@ -268,39 +268,34 @@ QByteArray GRenderWindow::saveGeometry()
 
 void GRenderWindow::keyPressEvent(QKeyEvent* event)
 {
-    EmuWindow::KeyPressed({event->key(), keyboard_id});
-    Service::HID::PadUpdateComplete();
+    this->KeyPressed({event->key(), keyboard_id});
 }
 
 void GRenderWindow::keyReleaseEvent(QKeyEvent* event)
 {
-    EmuWindow::KeyReleased({event->key(), keyboard_id});
-    Service::HID::PadUpdateComplete();
+    this->KeyReleased({event->key(), keyboard_id});
 }
 
 void GRenderWindow::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton)  {
+    if (event->button() == Qt::LeftButton)
+    {
         auto pos = event->pos();
-        EmuWindow::TouchPressed(GetFramebufferLayout(), static_cast<u16>(pos.x()),
-            static_cast<u16>(pos.y()));
+        auto layout = GetFramebufferLayout();
+        this->TouchPressed(layout, static_cast<u16>(pos.x()), static_cast<u16>(pos.y()));
     }
 }
 
 void GRenderWindow::mouseMoveEvent(QMouseEvent *event)
 {
     auto pos = event->pos();
-    EmuWindow::TouchMoved(GetFramebufferLayout(), static_cast<u16>(pos.x()),
-        static_cast<u16>(pos.y()));
+    this->TouchMoved(GetFramebufferLayout(), static_cast<u16>(pos.x()), static_cast<u16>(pos.y()));
 }
 
 void GRenderWindow::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton)  {
-        auto pos = event->pos();
-        EmuWindow::TouchReleased(GetFramebufferLayout(), static_cast<u16>(pos.x()),
-            static_cast<u16>(pos.y()));
-    }
+    if (event->button() == Qt::LeftButton)
+        this->TouchReleased();
 }
 
 void GRenderWindow::ReloadSetKeymaps()
