@@ -84,13 +84,8 @@ public:
      */
     void TouchPressed(const FramebufferLayout& layout, unsigned framebuffer_x, unsigned framebuffer_y);
 
-    /**
-     * Signal that a touch released event has occurred (e.g. mouse click released)
-     * @param layout FramebufferLayout object describing the framebuffer size and screen positions
-     * @param framebuffer_x Framebuffer x-coordinate that was released
-     * @param framebuffer_y Framebuffer y-coordinate that was released
-     */
-    void TouchReleased(const FramebufferLayout& layout, unsigned framebuffer_x, unsigned framebuffer_y);
+    /// Signal that a touch released event has occurred (e.g. mouse click released)
+    void TouchReleased();
 
     /**
      * Signal that a touch movement event has occurred (e.g. mouse was moved over the emu window)
@@ -99,6 +94,23 @@ public:
      * @param framebuffer_y Framebuffer y-coordinate
      */
     void TouchMoved(const FramebufferLayout& layout, unsigned framebuffer_x, unsigned framebuffer_y);
+
+    /**
+     * Gets the current pad state (which buttons are pressed and the circle pad direction)
+     * @return PadState object indicating the current pad state
+     */
+    const Service::HID::PadState& GetPadState() const {
+        return pad_state;
+    }
+
+    /**
+     * Gets the current touch screen state (touch X/Y coordinates and whether or not it is pressed)
+     * @return std::tuple of (x, y, pressed) where `x` and `y` are the touch coordinates and
+     *         `pressed` is true if the touch screen is currently being pressed
+     */
+    std::tuple<u16, u16, bool> GetTouchState() const {
+        return std::make_tuple(touch_x, touch_y, touch_pressed);
+    }
 
     /**
      * Returns currently active configuration.
@@ -124,21 +136,15 @@ public:
         return framebuffer_layout;
     }
 
-    /**
-     * Gets window client area width in logical coordinates.
-     * @note For high-DPI systems, this is smaller than the framebuffer size.
-     * @note This method is thread-safe
-     */
-    std::pair<unsigned,unsigned> GetClientAreaSize() const {
-        return std::make_pair(client_area_width, client_area_height);
-    }
-
 protected:
-    EmuWindow()
-    {
+    EmuWindow() {
         // TODO: Find a better place to set this.
         config.min_client_area_size = std::make_pair(400u, 480u);
         active_config = config;
+        pad_state.hex = 0;
+        touch_x = 0;
+        touch_y = 0;
+        touch_pressed = false;
     }
     virtual ~EmuWindow() {}
 
@@ -194,4 +200,9 @@ private:
     WindowConfig active_config;  ///< Internal active configuration
 
     bool touch_pressed;          ///< True if touchpad area is currently pressed, otherwise false
+
+    u16 touch_x;
+    u16 touch_y;
+
+    Service::HID::PadState pad_state;
 };
