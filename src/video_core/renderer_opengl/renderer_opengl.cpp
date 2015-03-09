@@ -17,12 +17,6 @@
 
 #include <algorithm>
 
-//EXTENSION DEFINITIONS
-#define RGBA32I_EXT 0x8D82
-#define RED_INTEGER_EXT 0x8D94
-#define RGBA_INTEGER_EXT 0x8D99
-//END EXTENSION DEFINITIONS
-
 std::map<u32, GLuint> g_tex_cache;
 
 GLuint g_cur_shader = -1;
@@ -601,7 +595,6 @@ void RendererOpenGL::BeginBatch() {
         }
     //}
 #endif
-    int out_maps[7];
     for (int i = 0; i < 7; ++i) {
         const auto& output_register_map = Pica::registers.vs_output_attributes[i];
 
