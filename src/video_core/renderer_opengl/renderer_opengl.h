@@ -70,8 +70,7 @@ private:
     };
 
     void InitOpenGLObjects();
-	Math::Vec2<u32> GetDesiredFramebufferSize(TextureInfo& texture,
-												const GPU::Regs::FramebufferConfig& framebuffer);
+    
     static void ConfigureFramebufferTexture(TextureInfo& texture,
                                             const GPU::Regs::FramebufferConfig& framebuffer);
     void ConfigureHWFramebuffer(int fb_index);

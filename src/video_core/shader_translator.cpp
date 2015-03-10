@@ -1,3 +1,4 @@
+
 // Copyright 2014 Citra Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
@@ -228,75 +229,75 @@ std::string RegTxtDst(u8 v, u32 mask) {
 std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data) {
     char instr_text[256];
 
-    nihstro::Instruction::OpCodeInfo info = instr.opcode.GetInfo();
+    nihstro::OpCode::Info info = instr.opcode.Value().GetInfo();
 
-    if (info.type == nihstro::Instruction::OpCodeType::Arithmetic) {
-        bool is_inverted = info.subtype & nihstro::Instruction::OpCodeInfo::SrcInversed;
+    if (info.type == nihstro::OpCode::Type::Arithmetic) {
+        bool is_inverted = info.subtype & nihstro::OpCode::Info::SrcInversed;
 
-        bool clamp_swizzle = instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::ADD ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::MUL ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::MAX ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::MIN ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::RCP ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::RSQ ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::MOV ||
-            instr.opcode.EffectiveOpCode() == nihstro::Instruction::OpCode::MOVA;
+        bool clamp_swizzle = instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::ADD ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::MUL ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::MAX ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::MIN ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::RCP ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::RSQ ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::MOV ||
+            instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::MOVA;
 
         std::string dst = RegTxtDst(instr.common.dest.Value(), swizzle_data[instr.common.operand_desc_id.Value()]);
         std::string src1 = RegTxtSrc(instr, false, is_inverted, swizzle_data, 0, clamp_swizzle);
         std::string src2 = RegTxtSrc(instr, false, is_inverted, swizzle_data, 1, clamp_swizzle);
 
-        switch (instr.opcode.EffectiveOpCode())
+        switch (instr.opcode.Value().EffectiveOpCode())
         {
-        case nihstro::Instruction::OpCode::ADD:
+        case nihstro::OpCode::Id::ADD:
         {
             sprintf(instr_text, "%s = %s + %s;\n", dst.c_str(), src1.c_str(), src2.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::DP3:
+        case nihstro::OpCode::Id::DP3:
         {
             sprintf(instr_text, "%s = dot(%s, %s);\n", dst.c_str(), src1.c_str(), src2.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::DP4:
+        case nihstro::OpCode::Id::DP4:
         {
             sprintf(instr_text, "%s = dot(%s, %s);\n", dst.c_str(), src1.c_str(), src2.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::MUL:
+        case nihstro::OpCode::Id::MUL:
         {
             sprintf(instr_text, "%s = %s * %s;\n", dst.c_str(), src1.c_str(), src2.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::MAX:
+        case nihstro::OpCode::Id::MAX:
         {
             sprintf(instr_text, "%s = max(%s, %s);\n", dst.c_str(), src1.c_str(), src2.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::MIN:
+        case nihstro::OpCode::Id::MIN:
         {
             sprintf(instr_text, "%s = min(%s, %s);\n", dst.c_str(), src1.c_str(), src2.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::RCP:
+        case nihstro::OpCode::Id::RCP:
         {
             sprintf(instr_text, "%s = 1 / %s;\n", dst.c_str(), src1.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::RSQ:
+        case nihstro::OpCode::Id::RSQ:
         {
             sprintf(instr_text, "%s = inversesqrt(%s);\n", dst.c_str(), src1.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::MOVA:
+        case nihstro::OpCode::Id::MOVA:
         {
             u32 maskSz = GetRegMaskLen(swizzle_data[instr.common.operand_desc_id.Value()]);
             if (maskSz == 2) {
@@ -312,13 +313,13 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
 
-        case nihstro::Instruction::OpCode::MOV:
+        case nihstro::OpCode::Id::MOV:
         {
             sprintf(instr_text, "%s = %s;\n", dst.c_str(), src1.c_str());
             break;
         }
 
-        case nihstro::Instruction::OpCode::CMP:
+        case nihstro::OpCode::Id::CMP:
         {
             sprintf(instr_text, "%s.x %s %s.x", src1.c_str(), instr.common.compare_op.ToString(instr.common.compare_op.x).c_str(), src2.c_str());
             g_cmp_strings[0] = instr_text;
@@ -337,16 +338,16 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
         }
-    } else if (info.type == nihstro::Instruction::OpCodeType::Conditional) {
-        switch (instr.opcode.EffectiveOpCode())
+    } else if (info.type == nihstro::OpCode::Type::Conditional) {
+        switch (instr.opcode.Value().EffectiveOpCode())
         {
-        case nihstro::Instruction::OpCode::BREAKC:
+        case nihstro::OpCode::Id::BREAKC:
         {
             sprintf(instr_text, "break;\n");
             break;
         }
 
-        case nihstro::Instruction::OpCode::CALL:
+        case nihstro::OpCode::Id::CALL:
         {
             std::map<u32, std::string>::iterator call_offset = g_fn_offset_map.find(instr.flow_control.dest_offset.Value());
             if (call_offset != g_fn_offset_map.end()) {
@@ -357,7 +358,7 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
 
-        case nihstro::Instruction::OpCode::CALLC:
+        case nihstro::OpCode::Id::CALLC:
         {
             std::map<u32, std::string>::iterator call_offset = g_fn_offset_map.find(instr.flow_control.dest_offset.Value());
             if (call_offset != g_fn_offset_map.end()) {
@@ -393,7 +394,7 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
 
-        case nihstro::Instruction::OpCode::IFC:
+        case nihstro::OpCode::Id::IFC:
         {
             char negate_or_space_x = instr.flow_control.refx.Value() ? ' ' : '!';
             char negate_or_space_y = instr.flow_control.refy.Value() ? ' ' : '!';
@@ -424,14 +425,14 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
 
-        case nihstro::Instruction::OpCode::JMPC:
+        case nihstro::OpCode::Id::JMPC:
         {
             // TODO: figure out how to function split with JMPs
             sprintf(instr_text, "// JMPC not supported by GLSL\n");
             break;
         }
 
-        case nihstro::Instruction::OpCode::JMPU:
+        case nihstro::OpCode::Id::JMPU:
         {
             sprintf(instr_text, "// JMPU not supported by GLSL\n");
             break;
@@ -443,10 +444,10 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
         }
-    } else if (info.type == nihstro::Instruction::OpCodeType::UniformFlowControl) {
-        switch (instr.opcode.EffectiveOpCode())
+    } else if (info.type == nihstro::OpCode::Type::UniformFlowControl) {
+        switch (instr.opcode.Value().EffectiveOpCode())
         {
-        case nihstro::Instruction::OpCode::CALLU:
+        case nihstro::OpCode::Id::CALLU:
         {
             std::map<u32, std::string>::iterator call_offset = g_fn_offset_map.find(instr.flow_control.dest_offset.Value());
             if (call_offset != g_fn_offset_map.end()) {
@@ -458,13 +459,13 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
 
-        case nihstro::Instruction::OpCode::IFU:
+        case nihstro::OpCode::Id::IFU:
         {
             sprintf(instr_text, "if (b[%d]) {\n", instr.flow_control.bool_uniform_id.Value());
             break;
         }
 
-        case nihstro::Instruction::OpCode::LOOP:
+        case nihstro::OpCode::Id::LOOP:
         {
             // TODO: implement this
             // make it push an IfElseData(offset, 0) and the end brace will automatically be added
@@ -479,19 +480,19 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             break;
         }
         }
-    } else if (info.type == nihstro::Instruction::OpCodeType::MultiplyAdd) {
+    } else if (info.type == nihstro::OpCode::Type::MultiplyAdd) {
         std::string dst = RegTxtDst(instr.mad.dest.Value(), swizzle_data[instr.mad.operand_desc_id.Value()]);
         std::string src1 = RegTxtSrc(instr, true, false, swizzle_data, 0, true);
         std::string src2 = RegTxtSrc(instr, true, false, swizzle_data, 1, true);
         std::string src3 = RegTxtSrc(instr, true, false, swizzle_data, 2, true);
 
-        switch (instr.opcode.EffectiveOpCode())
+        switch (instr.opcode.Value().EffectiveOpCode())
         {
-        case nihstro::Instruction::OpCode::MADI:
+        case nihstro::OpCode::Id::MADI:
             sprintf(instr_text, "// MADI not yet implemented\n");
             break;
 
-        case nihstro::Instruction::OpCode::MAD:
+        case nihstro::OpCode::Id::MAD:
             sprintf(instr_text, "%s = %s * %s + %s;\n", dst.c_str(), src1.c_str(), src2.c_str(), src3.c_str());
             break;
 
@@ -499,9 +500,9 @@ std::string PICAInstrToGLSL(nihstro::Instruction instr, const u32* swizzle_data)
             sprintf(instr_text, "// Unknown MultiplyAdd instruction 0x%08X\n", *((u32*)&instr));
             break;
         }
-    } else if (info.type == nihstro::Instruction::OpCodeType::Trivial) {
+    } else if (info.type == nihstro::OpCode::Type::Trivial) {
         sprintf(instr_text, "// Ignored trivial\n");
-    } else if (info.type == nihstro::Instruction::OpCodeType::SetEmit) {
+    } else if (info.type == nihstro::OpCode::Type::SetEmit) {
         sprintf(instr_text, "// Unimplemented setemit\n");
     } else {
         sprintf(instr_text, "// Unknown instruction 0x%08X\n", *((u32*)&instr));
@@ -527,7 +528,7 @@ std::string PICABinToGLSL(const u32* shader_data, const u32* swizzle_data) {
     for (int i = 0; i < 1024; ++i) {
         nihstro::Instruction instr = ((nihstro::Instruction*)shader_data)[i];
 
-        if (instr.opcode == nihstro::Instruction::OpCode::CALL || instr.opcode == nihstro::Instruction::OpCode::CALLC || instr.opcode == nihstro::Instruction::OpCode::CALLU) {
+        if (instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::CALL || instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::CALLC || instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::CALLU) {
             if (g_fn_offset_map.find(instr.flow_control.dest_offset.Value()) == g_fn_offset_map.end()) {
                 char fnName[32];
                 sprintf(fnName, "fn%d", g_fn_offset_map.size());
@@ -595,7 +596,7 @@ std::string PICABinToGLSL(const u32* shader_data, const u32* swizzle_data) {
         // Translate instruction at current offset
         nihstro::Instruction instr = ((nihstro::Instruction*)shader_data)[i];
 
-        if (instr.opcode == nihstro::Instruction::OpCode::END) {
+        if (instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::END) {
             if (nest_depth > 0) {
                 main_closed = true;
                 glsl_shader += std::string(nest_depth, '\t') + "gl_Position = vec4(o[0].x, -o[0].y, -o[0].z, o[0].w);\n}// END\n";
@@ -603,7 +604,7 @@ std::string PICABinToGLSL(const u32* shader_data, const u32* swizzle_data) {
             } else {
                 glsl_shader += "\n";
             }
-        } else if (instr.opcode == nihstro::Instruction::OpCode::NOP) {
+        } else if (instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::NOP) {
             if (!main_opened) {
                 //HACK: treat double-nop as end of function for cave story (since functions are ABOVE main())
                 if (last_was_nop) {
@@ -623,7 +624,7 @@ std::string PICABinToGLSL(const u32* shader_data, const u32* swizzle_data) {
         } else {
             glsl_shader += std::string(nest_depth, '\t') + PICAInstrToGLSL(instr, swizzle_data);
 
-            if (instr.opcode == nihstro::Instruction::OpCode::IFU || instr.opcode == nihstro::Instruction::OpCode::IFC) {
+            if (instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::IFU || instr.opcode.Value().EffectiveOpCode() == nihstro::OpCode::Id::IFC) {
                 g_if_else_offset_stack.push_back(IfElseData(instr.flow_control.dest_offset.Value() - i, instr.flow_control.num_instructions.Value()));
 
                 nest_depth++;

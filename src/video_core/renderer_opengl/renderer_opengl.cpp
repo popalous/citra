@@ -89,10 +89,8 @@ void RendererOpenGL::SwapBuffers() {
 
     for(int i : {0, 1}) {
         const auto& framebuffer = GPU::g_regs.framebuffer_config[i];
-		auto desired_size = GetDesiredFramebufferSize(textures[i], framebuffer);
-
-		if (textures[i].width != (GLsizei)desired_size.x ||
-			textures[i].height != (GLsizei)desired_size.y ||
+		if (textures[i].width != (GLsizei)framebuffer.width ||
+			textures[i].height != (GLsizei)framebuffer.height ||
             textures[i].format != framebuffer.color_format) {
             // Reallocate texture if the framebuffer size has changed.
             // This is expected to not happen very often and hence should not be a
@@ -271,32 +269,14 @@ void RendererOpenGL::InitOpenGLObjects() {
     glGenRenderbuffers(2, hw_framedepthbuffers);
 }
 
-Math::Vec2<u32> RendererOpenGL::GetDesiredFramebufferSize(TextureInfo& texture,
-															const GPU::Regs::FramebufferConfig& framebuffer) {
-#ifndef USE_OGL_HD
-	return Math::Vec2<u32>(framebuffer.width, framebuffer.height);
-#else
-	auto viewport_extent = GetViewportExtent();
-    Math::Vec2<u32> desired_size(viewport_extent.GetHeight() / 2, viewport_extent.GetWidth());
-
-	if (texture.handle != textures[0].handle) {
-        desired_size.x *= ((float)VideoCore::kScreenBottomHeight / (float)VideoCore::kScreenTopHeight);
-		desired_size.y *= ((float)VideoCore::kScreenBottomWidth / (float)VideoCore::kScreenTopWidth);
-	}
-
-	return desired_size;
-#endif
-}
-
 void RendererOpenGL::ConfigureFramebufferTexture(TextureInfo& texture,
                                                  const GPU::Regs::FramebufferConfig& framebuffer) {
     GPU::Regs::PixelFormat format = framebuffer.color_format;
     GLint internal_format;
 
     texture.format = format;
-	auto desired_size = ((RendererOpenGL *)VideoCore::g_renderer)->GetDesiredFramebufferSize(texture, framebuffer);
-	texture.width = desired_size.x;
-	texture.height = desired_size.y;
+	texture.width = framebuffer.width;
+	texture.height = framebuffer.height;
 
     switch (format) {
     case GPU::Regs::PixelFormat::RGBA8:
