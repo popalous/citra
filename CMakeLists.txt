@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 2.8.11)
 project(citra)
 
 if (NOT MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-attributes -pthread")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-attributes -pthread -fno-strict-aliasing")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -fno-strict-aliasing")
 else()
     # Silence deprecation warnings
     add_definitions(/D_CRT_SECURE_NO_WARNINGS)
@@ -183,6 +183,9 @@ include_directories(${INI_PREFIX})
 add_subdirectory(${INI_PREFIX})
 
 include_directories(externals/nihstro/include)
+
+include_directories(externals/glsl-optimizer/src/glsl)
+add_subdirectory(externals/glsl-optimizer)
 
 # process subdirectories
 if(ENABLE_QT)

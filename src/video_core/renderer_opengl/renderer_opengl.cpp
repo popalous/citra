@@ -71,10 +71,12 @@ static std::array<GLfloat, 3*2> MakeOrthographicMatrix(const float width, const 
 RendererOpenGL::RendererOpenGL() {
     resolution_width  = std::max(VideoCore::kScreenTopWidth, VideoCore::kScreenBottomWidth);
     resolution_height = VideoCore::kScreenTopHeight + VideoCore::kScreenBottomHeight;
+    optimizer_ctx = glslopt_initialize(kGlslTargetOpenGL);
 }
 
 /// RendererOpenGL destructor
 RendererOpenGL::~RendererOpenGL() {
+    glslopt_cleanup(optimizer_ctx);
 }
 
 /// Swap buffers (render frame)
@@ -574,8 +576,16 @@ void RendererOpenGL::BeginBatch() {
         if (cachedShader != g_shader_cache.end()) {
             g_cur_shader = cachedShader->second;
         } else {
-            g_cur_shader = ShaderUtil::LoadShaders(PICABinToGLSL(Pica::VertexShader::GetShaderBinary().data(), Pica::VertexShader::GetSwizzlePatterns().data()).c_str(), GLShaders::g_fragment_shader_hw);
-
+            std::string vertex = PICABinToGLSL(Pica::VertexShader::GetShaderBinary().data(), Pica::VertexShader::GetSwizzlePatterns().data());
+            char vtxshader[vertex.length()+1];
+            strcpy(vtxshader,vertex.c_str());
+            glslopt_shader* shader = glslopt_optimize(optimizer_ctx,kGlslOptShaderVertex,vtxshader,0);
+            if(glslopt_get_status(shader)){
+                g_cur_shader = ShaderUtil::LoadShaders(glslopt_get_output(shader), GLShaders::g_fragment_shader_hw);
+            }else{
+                g_cur_shader = ShaderUtil::LoadShaders(vertex.c_str(), GLShaders::g_fragment_shader_hw);
+            }
+            glslopt_shader_delete(shader);
             g_shader_cache.insert(std::pair<u32, GLuint>(Pica::registers.vs_main_offset, g_cur_shader));
         }
 

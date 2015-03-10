@@ -15,6 +15,8 @@
 
 #include "video_core/renderer_base.h"
 
+#include "glsl_optimizer.h"
+
 #define USE_OGL_RENDERER
 #define USE_OGL_VTXSHADER
 #define USE_OGL_HD
@@ -125,4 +127,7 @@ private:
     GLuint uniform_tevs;
     GLuint uniform_out_maps;
     GLuint uniform_tex_envs;
+    
+    //GLSL Optimizer
+    glslopt_ctx* optimizer_ctx;
 };
