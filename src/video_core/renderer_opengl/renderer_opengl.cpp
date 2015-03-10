@@ -560,14 +560,14 @@ void RendererOpenGL::BeginBatch() {
         glUseProgram(g_cur_shader);
 
         // TODO: probably a bunch of redundant stuff in here
-        attrib_v[0] = glGetAttribLocation(hw_program_id, "v0");
-        attrib_v[1] = glGetAttribLocation(hw_program_id, "v1");
-        attrib_v[2] = glGetAttribLocation(hw_program_id, "v2");
-        attrib_v[3] = glGetAttribLocation(hw_program_id, "v3");
-        attrib_v[4] = glGetAttribLocation(hw_program_id, "v4");
-        attrib_v[5] = glGetAttribLocation(hw_program_id, "v5");
-        attrib_v[6] = glGetAttribLocation(hw_program_id, "v6");
-        attrib_v[7] = glGetAttribLocation(hw_program_id, "v7");
+        attrib_v[0] = glGetAttribLocation(g_cur_shader, "v0");
+        attrib_v[1] = glGetAttribLocation(g_cur_shader, "v1");
+        attrib_v[2] = glGetAttribLocation(g_cur_shader, "v2");
+        attrib_v[3] = glGetAttribLocation(g_cur_shader, "v3");
+        attrib_v[4] = glGetAttribLocation(g_cur_shader, "v4");
+        attrib_v[5] = glGetAttribLocation(g_cur_shader, "v5");
+        attrib_v[6] = glGetAttribLocation(g_cur_shader, "v6");
+        attrib_v[7] = glGetAttribLocation(g_cur_shader, "v7");
 
         uniform_c = glGetUniformLocation(g_cur_shader, "c");
         uniform_b = glGetUniformLocation(g_cur_shader, "b");
@@ -577,8 +577,8 @@ void RendererOpenGL::BeginBatch() {
         uniform_alphatest_ref = glGetUniformLocation(g_cur_shader, "alphatest_ref");
 
         uniform_tex = glGetUniformLocation(g_cur_shader, "tex0");
-        uniform_tex1 = glGetUniformLocation(hw_program_id, "tex1");
-        uniform_tex2 = glGetUniformLocation(hw_program_id, "tex2");
+        uniform_tex1 = glGetUniformLocation(g_cur_shader, "tex1");
+        uniform_tex2 = glGetUniformLocation(g_cur_shader, "tex2");
         uniform_tevs = glGetUniformLocation(g_cur_shader, "tevs");
         uniform_out_maps = glGetUniformLocation(g_cur_shader, "out_maps");
 
