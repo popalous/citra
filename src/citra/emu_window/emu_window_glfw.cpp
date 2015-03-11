@@ -44,7 +44,7 @@ void EmuWindow_GLFW::OnKeyEvent(GLFWwindow* win, int key, int scancode, int acti
     if (action == GLFW_PRESS) {
         emu_window->KeyPressed({key, keyboard_id});
     } else if (action == GLFW_RELEASE) {
-        emu_window->KeyReleased({ key, keyboard_id });
+        emu_window->KeyReleased({key, keyboard_id});
     }
 }
 

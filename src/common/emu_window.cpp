@@ -36,6 +36,7 @@ void EmuWindow::TouchPressed(const FramebufferLayout& layout, unsigned framebuff
         touch_y = VideoCore::kScreenBottomHeight * (framebuffer_y - layout.bottom_screen.top) /
             (layout.bottom_screen.bottom - layout.bottom_screen.top);
         touch_pressed = true;
+        pad_state.touch = 1;
     }
 }
 
@@ -43,6 +44,7 @@ void EmuWindow::TouchReleased() {
     touch_pressed = false;
     touch_x = 0;
     touch_y = 0;
+    pad_state.touch = 0;
 }
 
 void EmuWindow::TouchMoved(const FramebufferLayout& layout, unsigned framebuffer_x,
@@ -51,7 +53,7 @@ void EmuWindow::TouchMoved(const FramebufferLayout& layout, unsigned framebuffer
         if (IsWithinTouchscreen(layout, framebuffer_x, framebuffer_y))
             TouchPressed(layout, framebuffer_x, framebuffer_y);
         else
-            touch_pressed = false;
+            TouchReleased();
     }
 }
 

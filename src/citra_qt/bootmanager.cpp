@@ -268,12 +268,12 @@ QByteArray GRenderWindow::saveGeometry()
 
 void GRenderWindow::keyPressEvent(QKeyEvent* event)
 {
-    this->KeyPressed({ event->key(), keyboard_id });
+    this->KeyPressed({event->key(), keyboard_id});
 }
 
 void GRenderWindow::keyReleaseEvent(QKeyEvent* event)
 {
-    this->KeyReleased({ event->key(), keyboard_id });
+    this->KeyReleased({event->key(), keyboard_id});
 }
 
 void GRenderWindow::mousePressEvent(QMouseEvent *event)
