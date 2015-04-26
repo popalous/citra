@@ -10,6 +10,7 @@
 #include "core/loader/ncch.h"
 #include "core/hle/service/fs/archive.h"
 #include "core/mem_map.h"
+#include "core/loader/loader.h"
 
 #include "3dsx.h"
 
@@ -199,6 +200,11 @@ static THREEDSX_Error Load3DSXFile(FileUtil::IOFile& file, u32 base_addr)
 
     // Write the data
     memcpy(Memory::GetPointer(base_addr), &all_mem[0], loadinfo.seg_sizes[0] + loadinfo.seg_sizes[1] + loadinfo.seg_sizes[2]);
+
+	Loader::ROMCodeStart = base_addr;
+	Loader::ROMCodeSize = loadinfo.seg_sizes[0];
+	Loader::ROMReadOnlyDataStart = base_addr + loadinfo.seg_sizes[0];
+	Loader::ROMReadOnlyDataSize = loadinfo.seg_sizes[1];
 
     LOG_DEBUG(Loader, "CODE:   %u pages\n", loadinfo.seg_sizes[0] / 0x1000);
     LOG_DEBUG(Loader, "RODATA: %u pages\n", loadinfo.seg_sizes[1] / 0x1000);

@@ -116,7 +116,14 @@ ResultStatus AppLoader_NCCH::LoadExec() const {
     std::vector<u8> code;
     if (ResultStatus::Success == ReadCode(code)) {
         Memory::WriteBlock(entry_point, &code[0], code.size());
-        Kernel::LoadExec(entry_point);
+		Kernel::LoadExec(entry_point);
+
+		Loader::ROMCodeStart = entry_point;
+		Loader::ROMCodeSize = entry_point + code.size();
+		// TODO: Don't know where these are
+		Loader::ROMReadOnlyDataStart = 0;
+		Loader::ROMReadOnlyDataSize = 0;
+
         return ResultStatus::Success;
     }
     return ResultStatus::Error;

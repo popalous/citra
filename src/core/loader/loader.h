@@ -111,4 +111,12 @@ protected:
  */
 ResultStatus LoadFile(const std::string& filename);
 
+/*
+ * Infomation about ROM
+ */
+extern u32 ROMCodeStart;
+extern u32 ROMCodeSize;
+extern u32 ROMReadOnlyDataStart;
+extern u32 ROMReadOnlyDataSize;
+
 } // namespace

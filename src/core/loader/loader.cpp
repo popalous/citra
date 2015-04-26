@@ -17,6 +17,11 @@
 
 namespace Loader {
 
+u32 ROMCodeStart = 0;
+u32 ROMCodeSize = 0;
+u32 ROMReadOnlyDataStart = 0;
+u32 ROMReadOnlyDataSize = 0;
+
 /**
  * Identifies the type of a bootable file
  * @param file open file
