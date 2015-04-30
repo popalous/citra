@@ -21,6 +21,10 @@
 #include "core/arm/skyeye_common/armmmu.h"
 #include "core/arm/skyeye_common/vfp/vfp.h"
 
+#if ENABLE_BINARY_TRANSLATION
+#include "core/binary_translation/BinaryTranslationLoader.h"
+#endif
+
 Common::Profiling::TimingCategory profile_execute("DynCom::Execute");
 Common::Profiling::TimingCategory profile_decode("DynCom::Decode");
 
@@ -3693,6 +3697,10 @@ static int clz(unsigned int x) {
 unsigned InterpreterMainLoop(ARMul_State* state) {
     Common::Profiling::ScopeTimer timer_execute(profile_execute);
 
+#if ENABLE_BINARY_TRANSLATION
+    BinaryTranslationLoader::SetCpuState(state);
+#endif
+
     #undef RM
     #undef RS
 
@@ -3993,6 +4001,11 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 goto END;
             }
         }
+
+
+#if ENABLE_BINARY_TRANSLATION
+        BinaryTranslationLoader::Run();
+#endif
 
         if (cpu->TFlag)
             cpu->Reg[15] &= 0xfffffffe;

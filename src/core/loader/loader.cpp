@@ -13,6 +13,10 @@
 #include "core/hle/service/fs/archive.h"
 #include "core/mem_map.h"
 
+#if ENABLE_BINARY_TRANSLATION
+#include "core/binary_translation/BinaryTranslationLoader.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace Loader {
@@ -115,15 +119,18 @@ ResultStatus LoadFile(const std::string& filename) {
 
     LOG_INFO(Loader, "Loading file %s as %s...", filename.c_str(), GetFileTypeString(type));
 
+    ResultStatus status = ResultStatus::Error;
     switch (type) {
 
     //3DSX file format...
     case FileType::THREEDSX:
-        return AppLoader_THREEDSX(std::move(file)).Load();
+        status = AppLoader_THREEDSX(std::move(file)).Load();
+        break;
 
     // Standard ELF file format...
     case FileType::ELF:
-        return AppLoader_ELF(std::move(file)).Load();
+        status = AppLoader_ELF(std::move(file)).Load();
+        break;
 
     // NCCH/NCSD container formats...
     case FileType::CXI:
@@ -135,7 +142,7 @@ ResultStatus LoadFile(const std::string& filename) {
         if (ResultStatus::Success == app_loader.Load()) {
             Kernel::g_program_id = app_loader.GetProgramId();
             Service::FS::RegisterArchiveType(Common::make_unique<FileSys::ArchiveFactory_RomFS>(app_loader), Service::FS::ArchiveIdCode::RomFS);
-            return ResultStatus::Success;
+            status = ResultStatus::Success;
         }
         break;
     }
@@ -145,10 +152,14 @@ ResultStatus LoadFile(const std::string& filename) {
     {
         size_t size = (size_t)file->GetSize();
         if (file->ReadBytes(Memory::GetPointer(Memory::EXEFS_CODE_VADDR), size) != size)
-            return ResultStatus::Error;
+        {
+            status = ResultStatus::Error;
+            break;
+        }
 
         Kernel::LoadExec(Memory::EXEFS_CODE_VADDR);
-        return ResultStatus::Success;
+        status = ResultStatus::Success;
+        break;
     }
 
     // Error occurred durring IdentifyFile...
@@ -158,10 +169,25 @@ ResultStatus LoadFile(const std::string& filename) {
     case FileType::Unknown:
     {
         LOG_CRITICAL(Loader, "File %s is of unknown type.", filename.c_str());
-        return ResultStatus::ErrorInvalidFormat;
+        status = ResultStatus::ErrorInvalidFormat;
+        break;
     }
     }
-    return ResultStatus::Error;
+#if ENABLE_BINARY_TRANSLATION
+    if (status == ResultStatus::Success)
+    {
+        std::unique_ptr<FileUtil::IOFile> optimized_file(new FileUtil::IOFile(filename + ".obj", "rb"));
+        if (!optimized_file->IsOpen())
+        {
+            LOG_WARNING(Loader, "Failed to load optimized file %s.obj", filename.c_str());
+        }
+        else
+        {
+            BinaryTranslationLoader::Load(*optimized_file);
+        }
+    }
+#endif
+    return status;
 }
 
 } // namespace Loader
