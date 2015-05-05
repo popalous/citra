@@ -4005,7 +4005,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
 
 
 #if ENABLE_BINARY_TRANSLATION
-        BinaryTranslationLoader::Run();
+        num_instrs = BinaryTranslationLoader::Run(num_instrs);
 #endif
 
         if (cpu->TFlag)
