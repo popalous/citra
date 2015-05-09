@@ -226,9 +226,9 @@ static inline void WritePicaReg(u32 id, u32 value, u32 mask) {
                         if (srcdata == nullptr)
                             continue;
 
-                        temp_vertex.attribs[i][comp] = (vertex_attribute_formats[i] == 0) ? *(s8*)srcdata :
-                            (vertex_attribute_formats[i] == 1) ? *(u8*)srcdata :
-                            (vertex_attribute_formats[i] == 2) ? *(s16*)srcdata :
+                        temp_vertex.attribs[i][comp] = (vertex_attribute_formats[i] == Regs::VertexAttributeFormat::BYTE) ? *(s8*)srcdata :
+                            (vertex_attribute_formats[i] == Regs::VertexAttributeFormat::UBYTE) ? *(u8*)srcdata :
+                            (vertex_attribute_formats[i] == Regs::VertexAttributeFormat::SHORT) ? *(s16*)srcdata :
                             *(float*)srcdata;
                     }
                 }
