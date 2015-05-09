@@ -15,15 +15,18 @@
 #include "core/loader/ncch.h"
 #include "core/mem_map.h"
 
+#if ENABLE_BINARY_TRANSLATION
+#include "core/binary_translation/BinaryTranslationLoader.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace Loader {
 
-const std::initializer_list<Kernel::AddressMapping> default_address_mappings = {
-    { 0x1FF50000,   0x8000, true  }, // part of DSP RAM
-    { 0x1FF70000,   0x8000, true  }, // part of DSP RAM
-    { 0x1F000000, 0x600000, false }, // entire VRAM
-};
+u32 ROMCodeStart;
+u32 ROMCodeSize;
+u32 ROMReadOnlyDataStart;
+u32 ROMReadOnlyDataSize;
 
 /**
  * Identifies the type of a bootable file
@@ -93,6 +96,11 @@ static const char* GetFileTypeString(FileType type) {
 }
 
 ResultStatus LoadFile(const std::string& filename) {
+    ROMCodeStart = 0;
+    ROMCodeSize = 0;
+    ROMReadOnlyDataStart = 0;
+    ROMReadOnlyDataSize = 0;
+
     std::unique_ptr<FileUtil::IOFile> file(new FileUtil::IOFile(filename, "rb"));
     if (!file->IsOpen()) {
         LOG_ERROR(Loader, "Failed to load file %s", filename.c_str());
@@ -113,15 +121,18 @@ ResultStatus LoadFile(const std::string& filename) {
 
     LOG_INFO(Loader, "Loading file %s as %s...", filename.c_str(), GetFileTypeString(type));
 
+    ResultStatus status = ResultStatus::Error;
     switch (type) {
 
     //3DSX file format...
     case FileType::THREEDSX:
-        return AppLoader_THREEDSX(std::move(file), filename_filename).Load();
+        status = AppLoader_THREEDSX(std::move(file)).Load();
+        break;
 
     // Standard ELF file format...
     case FileType::ELF:
-        return AppLoader_ELF(std::move(file), filename_filename).Load();
+        status = AppLoader_ELF(std::move(file)).Load();
+        break;
 
     // NCCH/NCSD container formats...
     case FileType::CXI:
@@ -132,7 +143,7 @@ ResultStatus LoadFile(const std::string& filename) {
         // Load application and RomFS
         if (ResultStatus::Success == app_loader.Load()) {
             Service::FS::RegisterArchiveType(Common::make_unique<FileSys::ArchiveFactory_RomFS>(app_loader), Service::FS::ArchiveIdCode::RomFS);
-            return ResultStatus::Success;
+            status = ResultStatus::Success;
         }
         break;
     }
@@ -146,10 +157,14 @@ ResultStatus LoadFile(const std::string& filename) {
 
         size_t size = (size_t)file->GetSize();
         if (file->ReadBytes(Memory::GetPointer(Memory::EXEFS_CODE_VADDR), size) != size)
-            return ResultStatus::Error;
+        {
+            status = ResultStatus::Error;
+            break;
+        }
 
-        Kernel::g_current_process->Run(Memory::EXEFS_CODE_VADDR, 0x30, Kernel::DEFAULT_STACK_SIZE);
-        return ResultStatus::Success;
+        Kernel::LoadExec(Memory::EXEFS_CODE_VADDR);
+        status = ResultStatus::Success;
+        break;
     }
 
     // Error occurred durring IdentifyFile...
@@ -159,10 +174,25 @@ ResultStatus LoadFile(const std::string& filename) {
     case FileType::Unknown:
     {
         LOG_CRITICAL(Loader, "File %s is of unknown type.", filename.c_str());
-        return ResultStatus::ErrorInvalidFormat;
+        status = ResultStatus::ErrorInvalidFormat;
+        break;
     }
     }
-    return ResultStatus::Error;
+#if ENABLE_BINARY_TRANSLATION
+    if (status == ResultStatus::Success)
+    {
+        std::unique_ptr<FileUtil::IOFile> optimized_file(new FileUtil::IOFile(filename + ".obj", "rb"));
+        if (!optimized_file->IsOpen())
+        {
+            LOG_WARNING(Loader, "Failed to load optimized file %s.obj", filename.c_str());
+        }
+        else
+        {
+            BinaryTranslationLoader::Load(*optimized_file);
+        }
+    }
+#endif
+    return status;
 }
 
 } // namespace Loader
