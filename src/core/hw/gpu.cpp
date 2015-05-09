@@ -29,8 +29,7 @@ namespace GPU {
 Regs g_regs;
 
 /// True if the current frame was skipped
-bool g_skip_frame = false;
-
+bool g_skip_frame;
 /// 268MHz / gpu_refresh_rate frames per second
 static u64 frame_ticks;
 /// Event id for CoreTiming
@@ -38,7 +37,7 @@ static int vblank_event;
 /// Total number of frames drawn
 static u64 frame_count;
 /// True if the last frame was skipped
-static bool last_skip_frame = false;
+static bool last_skip_frame;
 
 template <typename T>
 inline void Read(T &var, const u32 raw_addr) {
@@ -118,8 +117,14 @@ inline void Write(u32 addr, const T data) {
             u8* src_pointer = Memory::GetPointer(Memory::PhysicalToVirtualAddress(config.GetPhysicalInputAddress()));
             u8* dst_pointer = Memory::GetPointer(Memory::PhysicalToVirtualAddress(config.GetPhysicalOutputAddress()));
 
-            unsigned horizontal_scale = (config.scale_horizontally != 0) ? 2 : 1;
-            unsigned vertical_scale = (config.scale_vertically != 0) ? 2 : 1;
+            if (config.scaling > config.ScaleXY) {
+                LOG_CRITICAL(HW_GPU, "Unimplemented display transfer scaling mode %u", config.scaling.Value());
+                UNIMPLEMENTED();
+                break;
+            }
+
+            unsigned horizontal_scale = (config.scaling != config.NoScale) ? 2 : 1;
+            unsigned vertical_scale = (config.scaling == config.ScaleXY) ? 2 : 1;
 
             u32 output_width = config.output_width / horizontal_scale;
             u32 output_height = config.output_height / vertical_scale;
@@ -130,7 +135,7 @@ inline void Write(u32 addr, const T data) {
                 memcpy(dst_pointer, src_pointer, config.output_width * config.output_height * 
                         GPU::Regs::BytesPerPixel(config.output_format));
                 
-                LOG_TRACE(HW_GPU, "DisplayTriggerTransfer: 0x%08x bytes from 0x%08x(%ux%u)-> 0x%08x(%ux%u), flags 0x%08X, Raw copy",
+                LOG_TRACE(HW_GPU, "DisplayTriggerTransfer: 0x%08x bytes from 0x%08x(%ux%u)-> 0x%08x(%ux%u), output format: %x, flags 0x%08X, Raw copy",
                     config.output_height * output_width * GPU::Regs::BytesPerPixel(config.output_format),
                     config.GetPhysicalInputAddress(), config.input_width.Value(), config.input_height.Value(),
                     config.GetPhysicalOutputAddress(), config.output_width.Value(), config.output_height.Value(),
@@ -140,14 +145,23 @@ inline void Write(u32 addr, const T data) {
                 break;
             }
 
-            // TODO(Subv): Blend the pixels when horizontal / vertical scaling is enabled, 
+            // TODO(Subv): Implement the box filter when scaling is enabled
             // right now we're just skipping the extra pixels.
             for (u32 y = 0; y < output_height; ++y) {
                 for (u32 x = 0; x < output_width; ++x) {
                     Math::Vec4<u8> src_color = { 0, 0, 0, 0 };
 
-                    u32 scaled_x = x * horizontal_scale;
-                    u32 scaled_y = y * vertical_scale;
+                    // Calculate the [x,y] position of the input image 
+                    // based on the current output position and the scale
+                    u32 input_x = x * horizontal_scale;
+                    u32 input_y = y * vertical_scale;
+
+                    if (config.flip_vertically) {
+                        // Flip the y value of the output data, 
+                        // we do this after calculating the [x,y] position of the input image 
+                        // to account for the scaling options.
+                        y = output_height - y - 1;
+                    }
 
                     u32 dst_bytes_per_pixel = GPU::Regs::BytesPerPixel(config.output_format);
                     u32 src_bytes_per_pixel = GPU::Regs::BytesPerPixel(config.input_format);
@@ -159,14 +173,14 @@ inline void Write(u32 addr, const T data) {
                         u32 coarse_y = y & ~7;
                         u32 stride = output_width * dst_bytes_per_pixel;
 
-                        src_offset = (scaled_x + scaled_y * config.input_width) * src_bytes_per_pixel;
+                        src_offset = (input_x + input_y * config.input_width) * src_bytes_per_pixel;
                         dst_offset = VideoCore::GetMortonOffset(x, y, dst_bytes_per_pixel) + coarse_y * stride;
                     } else {
                         // Interpret the input as tiled and the output as linear
-                        u32 coarse_y = scaled_y & ~7;
+                        u32 coarse_y = input_y & ~7;
                         u32 stride = config.input_width * src_bytes_per_pixel;
 
-                        src_offset = VideoCore::GetMortonOffset(scaled_x, scaled_y, src_bytes_per_pixel) + coarse_y * stride;
+                        src_offset = VideoCore::GetMortonOffset(input_x, input_y, src_bytes_per_pixel) + coarse_y * stride;
                         dst_offset = (x + y * output_width) * dst_bytes_per_pixel;
                     }
 
@@ -297,7 +311,7 @@ static void VBlankCallback(u64 userdata, int cycles_late) {
     DSP_DSP::SignalInterrupt();
 
     // Check for user input updates
-    Service::HID::HIDUpdate();
+    Service::HID::Update();
 
     // Reschedule recurrent event
     CoreTiming::ScheduleEvent(frame_ticks - cycles_late, vblank_event);
@@ -305,6 +319,8 @@ static void VBlankCallback(u64 userdata, int cycles_late) {
 
 /// Initialize hardware
 void Init() {
+    memset(&g_regs, 0, sizeof(g_regs));
+
     auto& framebuffer_top = g_regs.framebuffer_config[0];
     auto& framebuffer_sub = g_regs.framebuffer_config[1];
 
@@ -334,6 +350,7 @@ void Init() {
     frame_ticks = 268123480 / Settings::values.gpu_refresh_rate;
     last_skip_frame = false;
     g_skip_frame = false;
+    frame_count = 0;
 
     vblank_event = CoreTiming::RegisterEvent("GPU::VBlankCallback", VBlankCallback);
     CoreTiming::ScheduleEvent(frame_ticks, vblank_event);

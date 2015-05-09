@@ -4,7 +4,8 @@
 
 #include <algorithm>
 
-#include "common/common.h"
+#include "common/assert.h"
+#include "common/logging/log.h"
 
 #include "core/arm/arm_interface.h"
 #include "core/core.h"
@@ -14,11 +15,10 @@
 
 namespace Kernel {
 
-unsigned int Object::next_object_id = 0;
-
-SharedPtr<Thread> g_main_thread = nullptr;
+unsigned int Object::next_object_id;
+SharedPtr<Thread> g_main_thread;
 HandleTable g_handle_table;
-u64 g_program_id = 0;
+u64 g_program_id;
 
 void WaitObject::AddWaitingThread(SharedPtr<Thread> thread) {
     auto itr = std::find(waiting_threads.begin(), waiting_threads.end(), thread);
@@ -138,6 +138,10 @@ void HandleTable::Clear() {
 void Init() {
     Kernel::ThreadingInit();
     Kernel::TimersInit();
+
+    Object::next_object_id = 0;
+    g_program_id = 0;
+    g_main_thread = nullptr;
 }
 
 /// Shutdown the kernel
@@ -154,7 +158,7 @@ void Shutdown() {
  */
 bool LoadExec(u32 entry_point) {
     // 0x30 is the typical main thread priority I've seen used so far
-    g_main_thread = Kernel::SetupMainThread(Kernel::DEFAULT_STACK_SIZE, entry_point, 0x30);
+    g_main_thread = Kernel::SetupMainThread(Kernel::DEFAULT_STACK_SIZE, entry_point, THREADPRIO_DEFAULT);
 
     return true;
 }

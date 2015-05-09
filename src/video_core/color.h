@@ -5,6 +5,8 @@
 #pragma once
 
 #include "common/common_types.h"
+#include "common/swap.h"
+
 #include "video_core/math.h"
 
 namespace Color {
@@ -124,7 +126,7 @@ inline u32 DecodeD24(const u8* bytes) {
  * @return Resulting values stored as a Math::Vec2
  */
 inline const Math::Vec2<u32> DecodeD24S8(const u8* bytes) {
-    return { (bytes[2] << 16) | (bytes[1] << 8) | bytes[0], bytes[3] };
+    return { static_cast<u32>((bytes[2] << 16) | (bytes[1] << 8) | bytes[0]), bytes[3] };
 }
 
 /**

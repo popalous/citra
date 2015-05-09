@@ -2,12 +2,14 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include "common/logging/log.h"
+
 #include "core/hle/service/service.h"
 #include "core/hle/service/hid/hid.h"
 #include "core/hle/service/hid/hid_spvr.h"
 #include "core/hle/service/hid/hid_user.h"
 
-#include "core/arm/arm_interface.h"
+#include "core/core_timing.h"
 #include "core/hle/kernel/event.h"
 #include "core/hle/kernel/shared_memory.h"
 #include "core/hle/hle.h"
@@ -20,17 +22,17 @@ namespace HID {
 static const int MAX_CIRCLEPAD_POS = 0x9C; ///< Max value for a circle pad position
 
 // Handle to shared memory region designated to HID_User service
-static Kernel::SharedPtr<Kernel::SharedMemory> shared_mem = nullptr;
+static Kernel::SharedPtr<Kernel::SharedMemory> shared_mem;
 
 // Event handles
-static Kernel::SharedPtr<Kernel::Event> event_pad_or_touch_1 = nullptr;
-static Kernel::SharedPtr<Kernel::Event> event_pad_or_touch_2 = nullptr;
-static Kernel::SharedPtr<Kernel::Event> event_accelerometer = nullptr;
-static Kernel::SharedPtr<Kernel::Event> event_gyroscope = nullptr;
-static Kernel::SharedPtr<Kernel::Event> event_debug_pad = nullptr;
+static Kernel::SharedPtr<Kernel::Event> event_pad_or_touch_1;
+static Kernel::SharedPtr<Kernel::Event> event_pad_or_touch_2;
+static Kernel::SharedPtr<Kernel::Event> event_accelerometer;
+static Kernel::SharedPtr<Kernel::Event> event_gyroscope;
+static Kernel::SharedPtr<Kernel::Event> event_debug_pad;
 
-static u32 next_pad_index = 0;
-static u32 next_touch_index = 0;
+static u32 next_pad_index;
+static u32 next_touch_index;
 
 // TODO(peachum):
 // Add a method for setting analog input from joystick device for the circle Pad.
@@ -45,9 +47,9 @@ static u32 next_touch_index = 0;
 //     * Set PadData.current_state.circle_left = 1 if current PadEntry.circle_pad_x <= -41
 //     * Set PadData.current_state.circle_right = 1 if current PadEntry.circle_pad_y <= -41
 
-void HIDUpdate() {
+void Update() {
     SharedMem* mem = reinterpret_cast<SharedMem*>(shared_mem->GetPointer().ValueOr(nullptr));
-    const PadState& state = VideoCore::g_emu_window->GetPadState();
+    const PadState state = VideoCore::g_emu_window->GetPadState();
 
     if (mem == nullptr) {
         LOG_DEBUG(Service_HID, "Cannot update HID prior to mapping shared memory!");
@@ -82,7 +84,7 @@ void HIDUpdate() {
     // If we just updated index 0, provide a new timestamp
     if (mem->pad.index == 0) {
         mem->pad.index_reset_ticks_previous = mem->pad.index_reset_ticks;
-        mem->pad.index_reset_ticks = (s64)Core::g_app_core->GetTicks();
+        mem->pad.index_reset_ticks = (s64)CoreTiming::GetTicks();
     }
 
     mem->touch.index = next_touch_index;
@@ -102,7 +104,7 @@ void HIDUpdate() {
     // If we just updated index 0, provide a new timestamp
     if (mem->touch.index == 0) {
         mem->touch.index_reset_ticks_previous = mem->touch.index_reset_ticks;
-        mem->touch.index_reset_ticks = (s64)Core::g_app_core->GetTicks();
+        mem->touch.index_reset_ticks = (s64)CoreTiming::GetTicks();
     }
     
     // Signal both handles when there's an update to Pad or touch
@@ -114,6 +116,7 @@ void GetIPCHandles(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
 
     cmd_buff[1] = 0; // No error
+    cmd_buff[2] = 0x14000000; // IPC Command Structure translate-header
     // TODO(yuriks): Return error from SendSyncRequest is this fails (part of IPC marshalling)
     cmd_buff[3] = Kernel::g_handle_table.Create(Service::HID::shared_mem).MoveFrom();
     cmd_buff[4] = Kernel::g_handle_table.Create(Service::HID::event_pad_or_touch_1).MoveFrom();
@@ -123,7 +126,38 @@ void GetIPCHandles(Service::Interface* self) {
     cmd_buff[8] = Kernel::g_handle_table.Create(Service::HID::event_debug_pad).MoveFrom();
 }
 
-void HIDInit() {
+void EnableAccelerometer(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    event_accelerometer->Signal();
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+
+    LOG_WARNING(Service_HID, "(STUBBED) called");
+}
+
+void EnableGyroscopeLow(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    event_gyroscope->Signal();
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+
+    LOG_WARNING(Service_HID, "(STUBBED) called");
+}
+
+void GetSoundVolume(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    const u8 volume = 0x3F; // TODO(purpasmart): Find out if this is the max value for the volume
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+    cmd_buff[2] = volume;
+
+    LOG_WARNING(Service_HID, "(STUBBED) called");
+}
+
+void Init() {
     using namespace Kernel;
 
     AddService(new HID_U_Interface);
@@ -142,7 +176,14 @@ void HIDInit() {
     event_debug_pad      = Event::Create(RESETTYPE_ONESHOT, "HID:EventDebugPad");
 }
 
-void HIDShutdown() {
+
+void Shutdown() {
+    shared_mem = nullptr;
+    event_pad_or_touch_1 = nullptr;
+    event_pad_or_touch_2 = nullptr;
+    event_accelerometer = nullptr;
+    event_gyroscope = nullptr;
+    event_debug_pad = nullptr;
 }
 
 } // namespace HID

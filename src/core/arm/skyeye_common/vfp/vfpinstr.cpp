@@ -46,9 +46,9 @@ VMLA_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -96,9 +96,9 @@ VMLS_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -146,9 +146,9 @@ VNMLA_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -197,9 +197,9 @@ VNMLS_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -247,9 +247,9 @@ VNMUL_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -297,9 +297,9 @@ VMUL_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -347,9 +347,9 @@ VADD_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -397,9 +397,9 @@ VSUB_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -447,9 +447,9 @@ VDIV_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -591,9 +591,9 @@ VABS_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -642,9 +642,9 @@ VNEG_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -692,9 +692,9 @@ VSQRT_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -742,9 +742,9 @@ VCMP_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -792,9 +792,9 @@ VCMP2_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -842,9 +842,9 @@ VCVTBDS_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -894,9 +894,9 @@ VCVTBFF_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -944,9 +944,9 @@ VCVTBFI_INST:
         int ret;
 
         if (inst_cream->dp_operation)
-            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_double_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
         else
-            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_OFFSET(VFP_FPSCR)]);
+            ret = vfp_single_cpdo(cpu, inst_cream->instr, cpu->VFP[VFP_FPSCR]);
 
         CHECK_VFP_CDP_RET;
     }
@@ -1146,14 +1146,14 @@ VMRS_INST:
         {
             if (inst_cream->Rt != 15)
             {
-                cpu->Reg[inst_cream->Rt] = cpu->VFP[VFP_OFFSET(VFP_FPSCR)];
+                cpu->Reg[inst_cream->Rt] = cpu->VFP[VFP_FPSCR];
             }
             else
             {
-                cpu->NFlag = (cpu->VFP[VFP_OFFSET(VFP_FPSCR)] >> 31) & 1;
-                cpu->ZFlag = (cpu->VFP[VFP_OFFSET(VFP_FPSCR)] >> 30) & 1;
-                cpu->CFlag = (cpu->VFP[VFP_OFFSET(VFP_FPSCR)] >> 29) & 1;
-                cpu->VFlag = (cpu->VFP[VFP_OFFSET(VFP_FPSCR)] >> 28) & 1;
+                cpu->NFlag = (cpu->VFP[VFP_FPSCR] >> 31) & 1;
+                cpu->ZFlag = (cpu->VFP[VFP_FPSCR] >> 30) & 1;
+                cpu->CFlag = (cpu->VFP[VFP_FPSCR] >> 29) & 1;
+                cpu->VFlag = (cpu->VFP[VFP_FPSCR] >> 28) & 1;
             }
         }
         else
@@ -1161,7 +1161,7 @@ VMRS_INST:
             switch (inst_cream->reg)
             {
             case 0:
-                cpu->Reg[inst_cream->Rt] = cpu->VFP[VFP_OFFSET(VFP_FPSID)];
+                cpu->Reg[inst_cream->Rt] = cpu->VFP[VFP_FPSID];
                 break;
             case 6:
                 /* MVFR1, VFPv3 only ? */
@@ -1172,7 +1172,7 @@ VMRS_INST:
                 LOG_TRACE(Core_ARM11, "\tr%d <= MVFR0 unimplemented\n", inst_cream->Rt);
                 break;
             case 8:
-                cpu->Reg[inst_cream->Rt] = cpu->VFP[VFP_OFFSET(VFP_FPEXC)];
+                cpu->Reg[inst_cream->Rt] = cpu->VFP[VFP_FPEXC];
                 break;
             default:
                 break;
@@ -1388,12 +1388,20 @@ VSTR_INST:
 
         if (inst_cream->single)
         {
-            Memory::Write32(addr, cpu->ExtReg[inst_cream->d]);
+            WriteMemory32(cpu, addr, cpu->ExtReg[inst_cream->d]);
         }
         else
         {
-            Memory::Write32(addr, cpu->ExtReg[inst_cream->d*2]);
-            Memory::Write32(addr + 4, cpu->ExtReg[inst_cream->d*2+1]);
+            const u32 word1 = cpu->ExtReg[inst_cream->d*2+0];
+            const u32 word2 = cpu->ExtReg[inst_cream->d*2+1];
+
+            if (InBigEndianMode(cpu)) {
+                WriteMemory32(cpu, addr + 0, word2);
+                WriteMemory32(cpu, addr + 4, word1);
+            } else {
+                WriteMemory32(cpu, addr + 0, word1);
+                WriteMemory32(cpu, addr + 4, word2);
+            }
         }
     }
     cpu->Reg[15] += GET_INST_SIZE(cpu);
@@ -1447,17 +1455,27 @@ VPUSH_INST:
         {
             if (inst_cream->single)
             {
-                Memory::Write32(addr, cpu->ExtReg[inst_cream->d+i]);
+                WriteMemory32(cpu, addr, cpu->ExtReg[inst_cream->d+i]);
                 addr += 4;
             }
             else
             {
-                Memory::Write32(addr, cpu->ExtReg[(inst_cream->d+i)*2]);
-                Memory::Write32(addr + 4, cpu->ExtReg[(inst_cream->d+i)*2 + 1]);
+                const u32 word1 = cpu->ExtReg[(inst_cream->d+i)*2+0];
+                const u32 word2 = cpu->ExtReg[(inst_cream->d+i)*2+1];
+
+                if (InBigEndianMode(cpu)) {
+                    WriteMemory32(cpu, addr + 0, word2);
+                    WriteMemory32(cpu, addr + 4, word1);
+                } else {
+                    WriteMemory32(cpu, addr + 0, word1);
+                    WriteMemory32(cpu, addr + 4, word2);
+                }
+
                 addr += 8;
             }
         }
-        cpu->Reg[R13] = cpu->Reg[R13] - inst_cream->imm32;
+
+        cpu->Reg[R13] -= inst_cream->imm32;
     }
     cpu->Reg[15] += GET_INST_SIZE(cpu);
     INC_PC(sizeof(vpush_inst));
@@ -1516,13 +1534,22 @@ VSTM_INST: /* encoding 1 */
         {
             if (inst_cream->single)
             {
-                Memory::Write32(addr, cpu->ExtReg[inst_cream->d+i]);
+                WriteMemory32(cpu, addr, cpu->ExtReg[inst_cream->d+i]);
                 addr += 4;
             }
             else
             {
-                Memory::Write32(addr, cpu->ExtReg[(inst_cream->d+i)*2]);
-                Memory::Write32(addr + 4, cpu->ExtReg[(inst_cream->d+i)*2 + 1]);
+                const u32 word1 = cpu->ExtReg[(inst_cream->d+i)*2+0];
+                const u32 word2 = cpu->ExtReg[(inst_cream->d+i)*2+1];
+
+                if (InBigEndianMode(cpu)) {
+                    WriteMemory32(cpu, addr + 0, word2);
+                    WriteMemory32(cpu, addr + 4, word1);
+                } else {
+                    WriteMemory32(cpu, addr + 0, word1);
+                    WriteMemory32(cpu, addr + 4, word2);
+                }
+
                 addr += 8;
             }
         }
@@ -1575,8 +1602,6 @@ VPOP_INST:
     if ((inst_base->cond == 0xe) || CondPassed(cpu, inst_base->cond)) {
         CHECK_VFP_ENABLED;
 
-        unsigned int value1, value2;
-
         vpop_inst *inst_cream = (vpop_inst *)inst_base->component;
 
         addr = cpu->Reg[R13];
@@ -1585,20 +1610,26 @@ VPOP_INST:
         {
             if (inst_cream->single)
             {
-                value1 = Memory::Read32(addr);
-                cpu->ExtReg[inst_cream->d+i] = value1;
+                cpu->ExtReg[inst_cream->d+i] = ReadMemory32(cpu, addr);
                 addr += 4;
             }
             else
             {
-                value1 = Memory::Read32(addr);
-                value2 = Memory::Read32(addr + 4);
-                cpu->ExtReg[(inst_cream->d+i)*2] = value1;
-                cpu->ExtReg[(inst_cream->d+i)*2 + 1] = value2;
+                const u32 word1 = ReadMemory32(cpu, addr + 0);
+                const u32 word2 = ReadMemory32(cpu, addr + 4);
+
+                if (InBigEndianMode(cpu)) {
+                    cpu->ExtReg[(inst_cream->d+i)*2+0] = word2;
+                    cpu->ExtReg[(inst_cream->d+i)*2+1] = word1;
+                } else {
+                    cpu->ExtReg[(inst_cream->d+i)*2+0] = word1;
+                    cpu->ExtReg[(inst_cream->d+i)*2+1] = word2;
+                }
+
                 addr += 8;
             }
         }
-        cpu->Reg[R13] = cpu->Reg[R13] + inst_cream->imm32;
+        cpu->Reg[R13] += inst_cream->imm32;
     }
     cpu->Reg[15] += GET_INST_SIZE(cpu);
     INC_PC(sizeof(vpop_inst));
@@ -1653,16 +1684,20 @@ VLDR_INST:
 
         if (inst_cream->single)
         {
-            cpu->ExtReg[inst_cream->d] = Memory::Read32(addr);
+            cpu->ExtReg[inst_cream->d] = ReadMemory32(cpu, addr);
         }
         else
         {
-            unsigned int word1, word2;
-            word1 = Memory::Read32(addr);
-            word2 = Memory::Read32(addr + 4);
+            const u32 word1 = ReadMemory32(cpu, addr + 0);
+            const u32 word2 = ReadMemory32(cpu, addr + 4);
 
-            cpu->ExtReg[inst_cream->d*2] = word1;
-            cpu->ExtReg[inst_cream->d*2+1] = word2;
+            if (InBigEndianMode(cpu)) {
+                cpu->ExtReg[inst_cream->d*2+0] = word2;
+                cpu->ExtReg[inst_cream->d*2+1] = word1;
+            } else {
+                cpu->ExtReg[inst_cream->d*2+0] = word1;
+                cpu->ExtReg[inst_cream->d*2+1] = word2;
+            }
         }
     }
     cpu->Reg[15] += GET_INST_SIZE(cpu);
@@ -1722,13 +1757,22 @@ VLDM_INST:
         {
             if (inst_cream->single)
             {
-                cpu->ExtReg[inst_cream->d+i] = Memory::Read32(addr);
+                cpu->ExtReg[inst_cream->d+i] = ReadMemory32(cpu, addr);
                 addr += 4;
             }
             else
             {
-                cpu->ExtReg[(inst_cream->d+i)*2] = Memory::Read32(addr);
-                cpu->ExtReg[(inst_cream->d+i)*2 + 1] = Memory::Read32(addr + 4);
+                const u32 word1 = ReadMemory32(cpu, addr + 0);
+                const u32 word2 = ReadMemory32(cpu, addr + 4);
+
+                if (InBigEndianMode(cpu)) {
+                    cpu->ExtReg[(inst_cream->d+i)*2+0] = word2;
+                    cpu->ExtReg[(inst_cream->d+i)*2+1] = word1;
+                } else {
+                    cpu->ExtReg[(inst_cream->d+i)*2+0] = word1;
+                    cpu->ExtReg[(inst_cream->d+i)*2+1] = word2;
+                }
+
                 addr += 8;
             }
         }

@@ -2,10 +2,13 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#include "common/common.h"
+#include "common/assert.h"
+#include "common/common_types.h"
 #include "common/file_util.h"
+#include "common/logging/log.h"
 #include "common/scope_exit.h"
 #include "common/string_util.h"
+
 #include "core/hle/result.h"
 #include "core/hle/service/fs/archive.h"
 #include "core/hle/service/fs/fs_user.h"
@@ -19,6 +22,8 @@ using Kernel::Session;
 
 namespace Service {
 namespace FS {
+
+static u32 priority = -1; ///< For SetPriority and GetPriority service functions
 
 static ArchiveHandle MakeArchiveHandle(u32 low_word, u32 high_word) {
     return (u64)low_word | ((u64)high_word << 32);
@@ -215,7 +220,7 @@ static void DeleteDirectory(Service::Interface* self) {
 
     LOG_DEBUG(Service_FS, "type=%d size=%d data=%s",
               dirname_type, dirname_size, dir_path.DebugStr().c_str());
-    
+
     cmd_buff[1] = DeleteDirectoryFromArchive(archive_handle, dir_path).raw;
 }
 
@@ -424,7 +429,7 @@ static void IsSdmcWriteable(Service::Interface* self) {
     cmd_buff[1] = RESULT_SUCCESS.raw;
     // If the SD isn't enabled, it can't be writeable...else, stubbed true
     cmd_buff[2] = Settings::values.use_virtual_sd ? 1 : 0;
-    
+
     LOG_DEBUG(Service_FS, " (STUBBED)");
 }
 
@@ -490,25 +495,65 @@ static void FormatThisUserSaveData(Service::Interface* self) {
 /**
  * FS_User::CreateExtSaveData service function
  *  Inputs:
- *      0: 0x08510242
- *      1: High word of the saveid to create
- *      2: Low word of the saveid to create
+ *      0 : 0x08510242
+ *      1 : Media type (NAND / SDMC)
+ *      2 : Low word of the saveid to create
+ *      3 : High word of the saveid to create
+ *      4 : Unknown
+ *      5 : Unknown
+ *      6 : Unknown
+ *      7 : Unknown
+ *      8 : Unknown
+ *      9 : Unknown
+ *      10: Unknown
+ *      11: Unknown
  *  Outputs:
  *      1 : Result of function, 0 on success, otherwise error code
  */
 static void CreateExtSaveData(Service::Interface* self) {
     // TODO(Subv): Figure out the other parameters.
     u32* cmd_buff = Kernel::GetCommandBuffer();
-    u32 save_high = cmd_buff[1];
+    MediaType media_type = static_cast<MediaType>(cmd_buff[1] & 0xFF);
     u32 save_low = cmd_buff[2];
-    // TODO(Subv): For now it is assumed that only SharedExtSaveData can be created like this
-    cmd_buff[1] = CreateExtSaveData(save_high, save_low).raw;
+    u32 save_high = cmd_buff[3];
+
+    LOG_WARNING(Service_FS, "(STUBBED) savedata_high=%08X savedata_low=%08X cmd_buff[3]=%08X "
+            "cmd_buff[4]=%08X cmd_buff[5]=%08X cmd_buff[6]=%08X cmd_buff[7]=%08X cmd_buff[8]=%08X "
+            "cmd_buff[9]=%08X cmd_buff[10]=%08X cmd_buff[11]=%08X", save_high, save_low,
+            cmd_buff[3], cmd_buff[4], cmd_buff[5], cmd_buff[6], cmd_buff[7], cmd_buff[8], cmd_buff[9], 
+            cmd_buff[10], cmd_buff[11]);
+
+    cmd_buff[1] = CreateExtSaveData(media_type, save_high, save_low).raw;
+}
+
+/**
+ * FS_User::DeleteExtSaveData service function
+ *  Inputs:
+ *      0 : 0x08520100
+ *      1 : Media type (NAND / SDMC)
+ *      2 : Low word of the saveid to create
+ *      3 : High word of the saveid to create
+ *      4 : Unknown
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ */
+static void DeleteExtSaveData(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+    MediaType media_type = static_cast<MediaType>(cmd_buff[1] & 0xFF);
+    u32 save_low = cmd_buff[2];
+    u32 save_high = cmd_buff[3];
+    u32 unknown = cmd_buff[4]; // TODO(Subv): Figure out what this is
+
+    LOG_WARNING(Service_FS, "(STUBBED) save_low=%08X save_high=%08X media_type=%08X unknown=%08X", 
+            save_low, save_high, cmd_buff[1] & 0xFF, unknown);
+
+    cmd_buff[1] = DeleteExtSaveData(media_type, save_high, save_low).raw;
 }
 
 /**
  * FS_User::CardSlotIsInserted service function.
  *  Inputs:
- *      0: 0x08210000
+ *      0 : 0x08210000
  *  Outputs:
  *      1 : Result of function, 0 on success, otherwise error code
  *      2 : Whether there is a game card inserted into the slot or not.
@@ -518,6 +563,113 @@ static void CardSlotIsInserted(Service::Interface* self) {
     cmd_buff[1] = RESULT_SUCCESS.raw;
     cmd_buff[2] = 0;
     LOG_WARNING(Service_FS, "(STUBBED) called");
+}
+
+/**
+ * FS_User::DeleteSystemSaveData service function.
+ *  Inputs:
+ *      0 : 0x08570080
+ *      1 : High word of the SystemSaveData id to delete
+ *      2 : Low word of the SystemSaveData id to delete
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ */
+static void DeleteSystemSaveData(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+    u32 savedata_high = cmd_buff[1];
+    u32 savedata_low = cmd_buff[2];
+
+    cmd_buff[1] = DeleteSystemSaveData(savedata_high, savedata_low).raw;
+}
+
+/**
+ * FS_User::CreateSystemSaveData service function.
+ *  Inputs:
+ *      0 : 0x08560240
+ *      1 : High word of the SystemSaveData id to create
+ *      2 : Low word of the SystemSaveData id to create
+ *      3 : Unknown
+ *      4 : Unknown
+ *      5 : Unknown
+ *      6 : Unknown
+ *      7 : Unknown
+ *      8 : Unknown
+ *      9 : Unknown (Memory address)
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ */
+static void CreateSystemSaveData(Service::Interface* self) {
+    // TODO(Subv): Figure out the other parameters.
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+    u32 savedata_high = cmd_buff[1];
+    u32 savedata_low = cmd_buff[2];
+
+    LOG_WARNING(Service_FS, "(STUBBED) savedata_high=%08X savedata_low=%08X cmd_buff[3]=%08X "
+            "cmd_buff[4]=%08X cmd_buff[5]=%08X cmd_buff[6]=%08X cmd_buff[7]=%08X cmd_buff[8]=%08X "
+            "cmd_buff[9]=%08X", savedata_high, savedata_low, cmd_buff[3], cmd_buff[4], cmd_buff[5],
+            cmd_buff[6], cmd_buff[7], cmd_buff[8], cmd_buff[9]);
+
+    cmd_buff[1] = CreateSystemSaveData(savedata_high, savedata_low).raw;
+}
+
+/**
+ * FS_User::InitializeWithSdkVersion service function.
+ *  Inputs:
+ *      0 : 0x08610042
+ *      1 : Unknown
+ *      2 : Unknown
+ *      3 : Unknown
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ */
+static void InitializeWithSdkVersion(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    u32 unk1 = cmd_buff[1];
+    u32 unk2 = cmd_buff[2];
+    u32 unk3 = cmd_buff[3];
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+
+    LOG_WARNING(Service_FS, "(STUBBED) called unk1=0x%08X, unk2=0x%08X, unk3=0x%08X",
+                unk1, unk2, unk3);
+}
+
+/**
+ * FS_User::SetPriority service function.
+ *  Inputs:
+ *      0 : 0x08620040
+ *      1 : priority
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ */
+static void SetPriority(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    priority = cmd_buff[1];
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+
+    LOG_DEBUG(Service_FS, "called priority=0x%08X", priority);
+}
+
+/**
+ * FS_User::GetPriority service function.
+ *  Inputs:
+ *      0 : 0x08630000
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ *      2 : priority
+ */
+static void GetPriority(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    ASSERT(priority != -1);
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+    cmd_buff[2] = priority;
+
+    LOG_DEBUG(Service_FS, "called priority=0x%08X", priority);
 }
 
 const Interface::FunctionInfo FunctionTable[] = {
@@ -604,17 +756,21 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x084F0102, nullptr,               "ReadSpecialFile"},
     {0x08500040, nullptr,               "GetSpecialFileSize"},
     {0x08510242, CreateExtSaveData,     "CreateExtSaveData"},
-    {0x08520100, nullptr,               "DeleteExtSaveData"},
+    {0x08520100, DeleteExtSaveData,     "DeleteExtSaveData"},
+    {0x08560240, CreateSystemSaveData,  "CreateSystemSaveData"},
+    {0x08570080, DeleteSystemSaveData,  "DeleteSystemSaveData"},
     {0x08580000, nullptr,               "GetMovableSedHashedKeyYRandomData"},
-    {0x08610042, nullptr,               "InitializeWithSdkVersion"},
-    {0x08620040, nullptr,               "SetPriority"},
-    {0x08630000, nullptr,               "GetPriority"},
+    {0x08610042, InitializeWithSdkVersion, "InitializeWithSdkVersion"},
+    {0x08620040, SetPriority,           "SetPriority"},
+    {0x08630000, GetPriority,           "GetPriority"},
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Interface class
 
 Interface::Interface() {
+
+    priority = -1;
     Register(FunctionTable);
 }
 

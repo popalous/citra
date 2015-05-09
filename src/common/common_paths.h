@@ -4,9 +4,6 @@
 
 #pragma once
 
-// Make sure we pick up USER_DIR if set in config.h
-#include "common/common.h"
-
 // Directory separators, do we need this?
 #define DIR_SEP "/"
 #define DIR_SEP_CHR '/'
@@ -17,13 +14,12 @@
 
 // The user data dir
 #define ROOT_DIR "."
-#ifdef _WIN32
-    #define USERDATA_DIR "user"
-    #define EMU_DATA_DIR "Citra Emulator"
+#define USERDATA_DIR "user"
+#ifdef USER_DIR
+    #define EMU_DATA_DIR USER_DIR
 #else
-    #define USERDATA_DIR "user"
-    #ifdef USER_DIR
-        #define EMU_DATA_DIR USER_DIR
+    #ifdef _WIN32
+        #define EMU_DATA_DIR "Citra Emulator"
     #else
         #define EMU_DATA_DIR "citra-emu"
     #endif

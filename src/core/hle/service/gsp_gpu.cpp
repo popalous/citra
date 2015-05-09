@@ -207,16 +207,18 @@ static void ReadHWRegs(Service::Interface* self) {
 
 static void SetBufferSwap(u32 screen_id, const FrameBufferInfo& info) {
     u32 base_address = 0x400000;
+    PAddr phys_address_left = Memory::VirtualToPhysicalAddress(info.address_left);
+    PAddr phys_address_right = Memory::VirtualToPhysicalAddress(info.address_right);
     if (info.active_fb == 0) {
         WriteHWRegs(base_address + 4 * static_cast<u32>(GPU_REG_INDEX(framebuffer_config[screen_id].address_left1)), 4, 
-                &info.address_left);
+                &phys_address_left);
         WriteHWRegs(base_address + 4 * static_cast<u32>(GPU_REG_INDEX(framebuffer_config[screen_id].address_right1)), 4, 
-                &info.address_right);
+                &phys_address_right);
     } else {
         WriteHWRegs(base_address + 4 * static_cast<u32>(GPU_REG_INDEX(framebuffer_config[screen_id].address_left2)), 4, 
-                &info.address_left);
+                &phys_address_left);
         WriteHWRegs(base_address + 4 * static_cast<u32>(GPU_REG_INDEX(framebuffer_config[screen_id].address_right2)), 4, 
-                &info.address_right);
+                &phys_address_right);
     }
     WriteHWRegs(base_address + 4 * static_cast<u32>(GPU_REG_INDEX(framebuffer_config[screen_id].stride)), 4, 
             &info.stride);
@@ -268,6 +270,9 @@ static void FlushDataCache(Service::Interface* self) {
     // TODO(purpasmart96): Verify return header on HW
 
     cmd_buff[1] = RESULT_SUCCESS.raw; // No error
+
+    LOG_DEBUG(Service_GSP, "(STUBBED) called address=0x%08X, size=0x%08X, process=0x%08X",
+              address, size, process);
 }
 
 /**

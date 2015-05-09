@@ -6,8 +6,10 @@
 
 #include <cstddef>
 
-#include "common/common_types.h"
+#include "common/assert.h"
 #include "common/bit_field.h"
+#include "common/common_funcs.h"
+#include "common/common_types.h"
 
 namespace GPU {
 
@@ -188,17 +190,22 @@ struct Regs {
             BitField<16, 16, u32> input_height;
         };
 
+        enum ScalingMode : u32 {
+            NoScale  = 0,  // Doesn't scale the image
+            ScaleX   = 1,  // Downscales the image in half in the X axis and applies a box filter
+            ScaleXY  = 2,  // Downscales the image in half in both the X and Y axes and applies a box filter
+        };
+
         union {
             u32 flags;
 
-            BitField< 0, 1, u32> flip_data;        // flips input data horizontally (TODO) if true
+            BitField< 0, 1, u32> flip_vertically;  // flips input data vertically
             BitField< 1, 1, u32> output_tiled;     // Converts from linear to tiled format
             BitField< 3, 1, u32> raw_copy;         // Copies the data without performing any processing
             BitField< 8, 3, PixelFormat> input_format;
             BitField<12, 3, PixelFormat> output_format;
 
-            BitField<24, 1, u32> scale_horizontally;
-            BitField<25, 1, u32> scale_vertically;
+            BitField<24, 2, ScalingMode> scaling; // Determines the scaling mode of the transfer
         };
 
         INSERT_PADDING_WORDS(0x1);

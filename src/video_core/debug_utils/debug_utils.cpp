@@ -322,7 +322,7 @@ const Math::Vec4<u8> LookupTexture(const u8* source, int x, int y, const Texture
     case Regs::TextureFormat::RGBA8:
     {
         auto res = Color::DecodeRGBA8(source + VideoCore::GetMortonOffset(x, y, 4));
-        return { res.r(), res.g(), res.b(), disable_alpha ? 255 : res.a() };
+        return { res.r(), res.g(), res.b(), static_cast<u8>(disable_alpha ? 255 : res.a()) };
     }
 
     case Regs::TextureFormat::RGB8:
@@ -334,7 +334,7 @@ const Math::Vec4<u8> LookupTexture(const u8* source, int x, int y, const Texture
     case Regs::TextureFormat::RGB5A1:
     {
         auto res = Color::DecodeRGB5A1(source + VideoCore::GetMortonOffset(x, y, 2));
-        return { res.r(), res.g(), res.b(), disable_alpha ? 255 : res.a() };
+        return { res.r(), res.g(), res.b(), static_cast<u8>(disable_alpha ? 255 : res.a()) };
     }
 
     case Regs::TextureFormat::RGB565:
@@ -346,7 +346,7 @@ const Math::Vec4<u8> LookupTexture(const u8* source, int x, int y, const Texture
     case Regs::TextureFormat::RGBA4:
     {
         auto res = Color::DecodeRGBA4(source + VideoCore::GetMortonOffset(x, y, 2));
-        return { res.r(), res.g(), res.b(), disable_alpha ? 255 : res.a() };
+        return { res.r(), res.g(), res.b(), static_cast<u8>(disable_alpha ? 255 : res.a()) };
     }
 
     case Regs::TextureFormat::IA8:
@@ -507,7 +507,7 @@ const Math::Vec4<u8> LookupTexture(const u8* source, int x, int y, const Texture
                 // Add modifier
                 unsigned table_index = (x < 2) ? table_index_1.Value() : table_index_2.Value();
 
-                static const auto etc1_modifier_table = std::array<std::array<u8, 2>, 8>{{
+                static const std::array<std::array<u8, 2>, 8> etc1_modifier_table = {{
                     {  2,  8 }, {  5, 17 }, {  9,  29 }, { 13,  42 },
                     { 18, 60 }, { 24, 80 }, { 33, 106 }, { 47, 183 }
                 }};
@@ -597,7 +597,7 @@ void DumpTexture(const Pica::Regs::TextureConfig& texture_config, u8* data) {
 
     png_init_io(png_ptr, fp.GetHandle());
 
-    // Write header (8 bit colour depth)
+    // Write header (8 bit color depth)
     png_set_IHDR(png_ptr, info_ptr, texture_config.width, texture_config.height,
         8, PNG_COLOR_TYPE_RGB /*_ALPHA*/, PNG_INTERLACE_NONE,
         PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);

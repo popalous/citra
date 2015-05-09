@@ -6,13 +6,13 @@ set(SRCS
             arm/dyncom/arm_dyncom_interpreter.cpp
             arm/dyncom/arm_dyncom_run.cpp
             arm/dyncom/arm_dyncom_thumb.cpp
-            arm/interpreter/armcopro.cpp
             arm/interpreter/arminit.cpp
             arm/interpreter/armsupp.cpp
             arm/skyeye_common/vfp/vfp.cpp
             arm/skyeye_common/vfp/vfpdouble.cpp
             arm/skyeye_common/vfp/vfpinstr.cpp
             arm/skyeye_common/vfp/vfpsingle.cpp
+            file_sys/archive_backend.cpp
             file_sys/archive_extsavedata.cpp
             file_sys/archive_romfs.cpp
             file_sys/archive_savedata.cpp
@@ -61,14 +61,17 @@ set(SRCS
             hle/service/hid/hid_spvr.cpp
             hle/service/gsp_lcd.cpp
             hle/service/http_c.cpp
-            hle/service/ir_rst.cpp
-            hle/service/ir_u.cpp
+            hle/service/ir/ir.cpp
+            hle/service/ir/ir_rst.cpp
+            hle/service/ir/ir_u.cpp
+            hle/service/ir/ir_user.cpp
             hle/service/ldr_ro.cpp
             hle/service/mic_u.cpp
             hle/service/ndm_u.cpp
             hle/service/news_s.cpp
             hle/service/news_u.cpp
             hle/service/nim_aoc.cpp
+            hle/service/nim_u.cpp
             hle/service/ns_s.cpp
             hle/service/nwm_uds.cpp
             hle/service/pm_app.cpp
@@ -112,8 +115,6 @@ set(HEADERS
             arm/skyeye_common/armdefs.h
             arm/skyeye_common/armemu.h
             arm/skyeye_common/armmmu.h
-            arm/skyeye_common/armos.h
-            arm/skyeye_common/skyeye_defs.h
             arm/skyeye_common/vfp/asm_vfp.h
             arm/skyeye_common/vfp/vfp.h
             arm/skyeye_common/vfp/vfp_helper.h
@@ -169,14 +170,17 @@ set(HEADERS
             hle/service/hid/hid_user.h
             hle/service/gsp_lcd.h
             hle/service/http_c.h
-            hle/service/ir_rst.h
-            hle/service/ir_u.h
+            hle/service/ir/ir.h
+            hle/service/ir/ir_rst.h
+            hle/service/ir/ir_u.h
+            hle/service/ir/ir_user.h
             hle/service/ldr_ro.h
             hle/service/mic_u.h
             hle/service/ndm_u.h
             hle/service/news_s.h
             hle/service/news_u.h
             hle/service/nim_aoc.h
+            hle/service/nim_u.h
             hle/service/ns_s.h
             hle/service/nwm_uds.h
             hle/service/pm_app.h

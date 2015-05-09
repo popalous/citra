@@ -6,13 +6,12 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <unordered_map>
 
 #include "common/logging/log.h"
 #include "common/profiler.h"
 
 #include "core/mem_map.h"
-#include "core/hle/hle.h"
+#include "core/hle/svc.h"
 #include "core/arm/disassembler/arm_disasm.h"
 #include "core/arm/dyncom/arm_dyncom_interpreter.h"
 #include "core/arm/dyncom/arm_dyncom_thumb.h"
@@ -339,7 +338,7 @@ static void LnSWoUB(ScaledRegisterPreIndexed)(ARMul_State* cpu, unsigned int ins
     unsigned int shift_imm = BITS(inst, 7, 11);
     unsigned int Rn = BITS(inst, 16, 19);
     unsigned int Rm = BITS(inst, 0, 3);
-    unsigned int index;
+    unsigned int index = 0;
     unsigned int addr;
     unsigned int rm = CHECK_READ_REG15_WA(cpu, Rm);
     unsigned int rn = CHECK_READ_REG15_WA(cpu, Rn);
@@ -390,7 +389,7 @@ static void LnSWoUB(ScaledRegisterPostIndexed)(ARMul_State* cpu, unsigned int in
     unsigned int shift_imm = BITS(inst, 7, 11);
     unsigned int Rn = BITS(inst, 16, 19);
     unsigned int Rm = BITS(inst, 0, 3);
-    unsigned int index;
+    unsigned int index = 0;
     unsigned int addr = CHECK_READ_REG15_WA(cpu, Rn);
     unsigned int rm = CHECK_READ_REG15_WA(cpu, Rm);
 
@@ -605,7 +604,7 @@ static void LnSWoUB(ScaledRegisterOffset)(ARMul_State* cpu, unsigned int inst, u
     unsigned int shift_imm = BITS(inst, 7, 11);
     unsigned int Rn = BITS(inst, 16, 19);
     unsigned int Rm = BITS(inst, 0, 3);
-    unsigned int index;
+    unsigned int index = 0;
     unsigned int addr;
     unsigned int rm = CHECK_READ_REG15_WA(cpu, Rm);
     unsigned int rn = CHECK_READ_REG15_WA(cpu, Rn);
@@ -1075,6 +1074,10 @@ typedef struct _swp_inst {
     unsigned int Rm;
 } swp_inst;
 
+typedef struct setend_inst {
+    unsigned int set_bigend;
+} setend_inst;
+
 typedef struct _b_2_thumb {
     unsigned int imm;
 }b_2_thumb;
@@ -1122,7 +1125,7 @@ int CondPassed(ARMul_State* cpu, unsigned int cond) {
     #define CFLAG        cpu->CFlag
     #define VFLAG        cpu->VFlag
 
-    int temp;
+    int temp = 0;
 
     switch (cond) {
     case 0x0:
@@ -2152,7 +2155,22 @@ static ARM_INST_PTR INTERPRETER_TRANSLATE(revsh)(unsigned int inst, int index)
      return INTERPRETER_TRANSLATE(rev)(inst, index);
 }
 
-static ARM_INST_PTR INTERPRETER_TRANSLATE(rfe)(unsigned int inst, int index)   { UNIMPLEMENTED_INSTRUCTION("RFE"); }
+static ARM_INST_PTR INTERPRETER_TRANSLATE(rfe)(unsigned int inst, int index)
+{
+    arm_inst* const inst_base = (arm_inst*)AllocBuffer(sizeof(arm_inst) + sizeof(ldst_inst));
+    ldst_inst* const inst_cream = (ldst_inst*)inst_base->component;
+
+    inst_base->cond     = AL;
+    inst_base->idx      = index;
+    inst_base->br       = INDIRECT_BRANCH;
+    inst_base->load_r15 = 0;
+
+    inst_cream->inst = inst;
+    inst_cream->get_addr = get_calc_addr_op(inst);
+
+    return inst_base;
+}
+
 static ARM_INST_PTR INTERPRETER_TRANSLATE(rsb)(unsigned int inst, int index)
 {
     arm_inst *inst_base = (arm_inst *)AllocBuffer(sizeof(arm_inst) + sizeof(rsb_inst));
@@ -2283,7 +2301,20 @@ static ARM_INST_PTR INTERPRETER_TRANSLATE(sel)(unsigned int inst, int index)
     return inst_base;
 }
 
-static ARM_INST_PTR INTERPRETER_TRANSLATE(setend)(unsigned int inst, int index)    { UNIMPLEMENTED_INSTRUCTION("SETEND"); }
+static ARM_INST_PTR INTERPRETER_TRANSLATE(setend)(unsigned int inst, int index)
+{
+    arm_inst* const inst_base = (arm_inst*)AllocBuffer(sizeof(arm_inst) + sizeof(setend_inst));
+    setend_inst* const inst_cream = (setend_inst*)inst_base->component;
+
+    inst_base->cond     = AL;
+    inst_base->idx      = index;
+    inst_base->br       = NON_BRANCH;
+    inst_base->load_r15 = 0;
+
+    inst_cream->set_bigend = BIT(inst, 9);
+
+    return inst_base;
+}
 
 static ARM_INST_PTR INTERPRETER_TRANSLATE(shadd8)(unsigned int inst, int index)
 {
@@ -2553,7 +2584,23 @@ static ARM_INST_PTR INTERPRETER_TRANSLATE(smulw)(unsigned int inst, int index)
         inst_base->load_r15 = 1;
     return inst_base;
 }
-static ARM_INST_PTR INTERPRETER_TRANSLATE(srs)(unsigned int inst, int index)      { UNIMPLEMENTED_INSTRUCTION("SRS"); }
+
+static ARM_INST_PTR INTERPRETER_TRANSLATE(srs)(unsigned int inst, int index)
+{
+    arm_inst* const inst_base = (arm_inst*)AllocBuffer(sizeof(arm_inst) + sizeof(ldst_inst));
+    ldst_inst* const inst_cream = (ldst_inst*)inst_base->component;
+
+    inst_base->cond     = AL;
+    inst_base->idx      = index;
+    inst_base->br       = NON_BRANCH;
+    inst_base->load_r15 = 0;
+
+    inst_cream->inst     = inst;
+    inst_cream->get_addr = get_calc_addr_op(inst);
+
+    return inst_base;
+}
+
 static ARM_INST_PTR INTERPRETER_TRANSLATE(ssat)(unsigned int inst, int index)
 {
     arm_inst* const inst_base = (arm_inst*)AllocBuffer(sizeof(arm_inst) + sizeof(ssat_inst));
@@ -3485,31 +3532,12 @@ const transop_fp_t arm_instruction_trans[] = {
     INTERPRETER_TRANSLATE(blx_1_thumb)
 };
 
-typedef std::unordered_map<u32, int> bb_map;
-static bb_map CreamCache;
-
-static void insert_bb(unsigned int addr, int start) {
-    CreamCache[addr] = start;
-}
-
-static int find_bb(unsigned int addr, int& start) {
-    int ret = -1;
-    bb_map::const_iterator it = CreamCache.find(addr);
-    if (it != CreamCache.end()) {
-        start = static_cast<int>(it->second);
-        ret = 0;
-    } else {
-        ret = -1;
-    }
-    return ret;
-}
-
 enum {
     FETCH_SUCCESS,
     FETCH_FAILURE
 };
 
-static tdstate decode_thumb_instr(ARMul_State* cpu, uint32_t inst, addr_t addr, uint32_t* arm_inst, uint32_t* inst_size, ARM_INST_PTR* ptr_inst_base){
+static tdstate decode_thumb_instr(ARMul_State* cpu, u32 inst, u32 addr, u32* arm_inst, u32* inst_size, ARM_INST_PTR* ptr_inst_base) {
     // Check if in Thumb mode
     tdstate ret = thumb_translate (addr, inst, arm_inst, inst_size);
     if(ret == t_branch){
@@ -3572,7 +3600,7 @@ typedef struct instruction_set_encoding_item ISEITEM;
 
 extern const ISEITEM arm_instruction[];
 
-static int InterpreterTranslate(ARMul_State* cpu, int& bb_start, addr_t addr) {
+static int InterpreterTranslate(ARMul_State* cpu, int& bb_start, u32 addr) {
     Common::Profiling::ScopeTimer timer_decode(profile_decode);
 
     // Decode instruction, get index
@@ -3590,8 +3618,8 @@ static int InterpreterTranslate(ARMul_State* cpu, int& bb_start, addr_t addr) {
     if (cpu->TFlag)
         thumb = THUMB;
 
-    addr_t phys_addr = addr;
-    addr_t pc_start = cpu->Reg[15];
+    u32 phys_addr = addr;
+    u32 pc_start = cpu->Reg[15];
 
     while(ret == NON_BRANCH) {
         inst = Memory::Read32(phys_addr & 0xFFFFFFFC);
@@ -3626,7 +3654,9 @@ translated:
         }
         ret = inst_base->br;
     };
-    insert_bb(pc_start, bb_start);
+
+    cpu->instruction_cache[pc_start] = bb_start;
+
     return KEEP_GOING;
 }
 
@@ -3642,20 +3672,16 @@ static int clz(unsigned int x) {
     return n;
 }
 
-static bool InAPrivilegedMode(ARMul_State* core) {
-    return (core->Mode != USER32MODE);
-}
-
-unsigned InterpreterMainLoop(ARMul_State* state) {
+unsigned InterpreterMainLoop(ARMul_State* cpu) {
     Common::Profiling::ScopeTimer timer_execute(profile_execute);
 
     #undef RM
     #undef RS
 
     #define CRn             inst_cream->crn
+    #define OPCODE_1        inst_cream->opcode_1
     #define OPCODE_2        inst_cream->opcode_2
     #define CRm             inst_cream->crm
-    #define CP15_REG(n)     cpu->CP15[CP15(n)]
     #define RD              cpu->Reg[inst_cream->Rd]
     #define RD2             cpu->Reg[inst_cream->Rd + 1]
     #define RN              cpu->Reg[inst_cream->Rn]
@@ -3904,8 +3930,6 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
     #define PC (cpu->Reg[15])
     #define CHECK_EXT_INT if (!cpu->NirqSig && !(cpu->Cpsr & 0x80)) goto END;
 
-    ARMul_State* cpu = state;
-
     // GCC and Clang have a C++ extension to support a lookup table of labels. Otherwise, fallback
     // to a clunky switch statement.
 #if defined __GNUC__ || defined __clang__
@@ -3957,9 +3981,14 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
 
         phys_addr = cpu->Reg[15];
 
-        if (find_bb(cpu->Reg[15], ptr) == -1)
+        // Find the cached instruction cream, otherwise translate it...
+        auto itr = cpu->instruction_cache.find(cpu->Reg[15]);
+        if (itr != cpu->instruction_cache.end()) {
+            ptr = itr->second;
+        } else {
             if (InterpreterTranslate(cpu, ptr, cpu->Reg[15]) == FETCH_EXCEPTION)
                 goto END;
+        }
 
         inst_base = (arm_inst *)&inst_buf[ptr];
         GOTO_NEXT_INST;
@@ -4345,30 +4374,30 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             if (BIT(inst, 22) && !BIT(inst, 15)) {
                 for (int i = 0; i < 13; i++) {
                     if(BIT(inst, i)) {
-                        cpu->Reg[i] = Memory::Read32(addr);
+                        cpu->Reg[i] = ReadMemory32(cpu, addr);
                         addr += 4;
                     }
                 }
                 if (BIT(inst, 13)) {
                     if (cpu->Mode == USER32MODE) 
-                        cpu->Reg[13] = Memory::Read32(addr);
+                        cpu->Reg[13] = ReadMemory32(cpu, addr);
                     else
-                        cpu->Reg_usr[0] = Memory::Read32(addr);
+                        cpu->Reg_usr[0] = ReadMemory32(cpu, addr);
 
                     addr += 4;
                 }
                 if (BIT(inst, 14)) {
                     if (cpu->Mode == USER32MODE) 
-                        cpu->Reg[14] = Memory::Read32(addr);
+                        cpu->Reg[14] = ReadMemory32(cpu, addr);
                     else
-                        cpu->Reg_usr[1] = Memory::Read32(addr);
+                        cpu->Reg_usr[1] = ReadMemory32(cpu, addr);
 
                     addr += 4;
                 }
             } else if (!BIT(inst, 22)) {
                 for(int i = 0; i < 16; i++ ){
                     if(BIT(inst, i)){
-                        unsigned int ret = Memory::Read32(addr);
+                        unsigned int ret = ReadMemory32(cpu, addr);
 
                         // For armv5t, should enter thumb when bits[0] is non-zero.
                         if(i == 15){
@@ -4383,7 +4412,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             } else if (BIT(inst, 22) && BIT(inst, 15)) {
                 for(int i = 0; i < 15; i++ ){
                     if(BIT(inst, i)){
-                        cpu->Reg[i] = Memory::Read32(addr);
+                        cpu->Reg[i] = ReadMemory32(cpu, addr);
                         addr += 4;
                      }
                  }
@@ -4394,7 +4423,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                     LOAD_NZCVT;
                 }
 
-                cpu->Reg[15] = Memory::Read32(addr);
+                cpu->Reg[15] = ReadMemory32(cpu, addr);
             }
 
             if (BIT(inst, 15)) {
@@ -4428,20 +4457,18 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
     LDR_INST:
     {
         ldst_inst *inst_cream = (ldst_inst *)inst_base->component;
-        //if ((inst_base->cond == 0xe) || CondPassed(cpu, inst_base->cond)) {
-            inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
+        inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
 
-            unsigned int value = Memory::Read32(addr);
-            cpu->Reg[BITS(inst_cream->inst, 12, 15)] = value;
+        unsigned int value = ReadMemory32(cpu, addr);
+        cpu->Reg[BITS(inst_cream->inst, 12, 15)] = value;
 
-            if (BITS(inst_cream->inst, 12, 15) == 15) {
-                // For armv5t, should enter thumb when bits[0] is non-zero.
-                cpu->TFlag = value & 0x1;
-                cpu->Reg[15] &= 0xFFFFFFFE;
-                INC_PC(sizeof(ldst_inst));
-                goto DISPATCH;
-            }
-        //}
+        if (BITS(inst_cream->inst, 12, 15) == 15) {
+            // For armv5t, should enter thumb when bits[0] is non-zero.
+            cpu->TFlag = value & 0x1;
+            cpu->Reg[15] &= 0xFFFFFFFE;
+            INC_PC(sizeof(ldst_inst));
+            goto DISPATCH;
+        }
 
         cpu->Reg[15] += GET_INST_SIZE(cpu);
         INC_PC(sizeof(ldst_inst));
@@ -4454,7 +4481,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             ldst_inst *inst_cream = (ldst_inst *)inst_base->component;
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
 
-            unsigned int value = Memory::Read32(addr);
+            unsigned int value = ReadMemory32(cpu, addr);
             cpu->Reg[BITS(inst_cream->inst, 12, 15)] = value;
 
             if (BITS(inst_cream->inst, 12, 15) == 15) {
@@ -4537,8 +4564,10 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             // Should check if RD is even-numbered, Rd != 14, addr[0:1] == 0, (CP15_reg1_U == 1 || addr[2] == 0)
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
 
-            cpu->Reg[BITS(inst_cream->inst, 12, 15)] = Memory::Read32(addr);
-            cpu->Reg[BITS(inst_cream->inst, 12, 15) + 1] = Memory::Read32(addr + 4);
+            // The 3DS doesn't have LPAE (Large Physical Access Extension), so it
+            // wouldn't do this as a single read.
+            cpu->Reg[BITS(inst_cream->inst, 12, 15) + 0] = ReadMemory32(cpu, addr);
+            cpu->Reg[BITS(inst_cream->inst, 12, 15) + 1] = ReadMemory32(cpu, addr + 4);
 
             // No dispatch since this operation should not modify R15
         }
@@ -4557,7 +4586,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             add_exclusive_addr(cpu, read_addr);
             cpu->exclusive_state = 1;
 
-            RD = Memory::Read32(read_addr);
+            RD = ReadMemory32(cpu, read_addr);
             if (inst_cream->Rd == 15) {
                 INC_PC(sizeof(generic_arm_inst));
                 goto DISPATCH;
@@ -4597,7 +4626,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             add_exclusive_addr(cpu, read_addr);
             cpu->exclusive_state = 1;
 
-            RD = Memory::Read16(read_addr);
+            RD = ReadMemory16(cpu, read_addr);
             if (inst_cream->Rd == 15) {
                 INC_PC(sizeof(generic_arm_inst));
                 goto DISPATCH;
@@ -4617,8 +4646,8 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             add_exclusive_addr(cpu, read_addr);
             cpu->exclusive_state = 1;
 
-            RD = Memory::Read32(read_addr);
-            RD2 = Memory::Read32(read_addr + 4);
+            RD  = ReadMemory32(cpu, read_addr);
+            RD2 = ReadMemory32(cpu, read_addr + 4);
 
             if (inst_cream->Rd == 15) {
                 INC_PC(sizeof(generic_arm_inst));
@@ -4635,7 +4664,8 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
         if (inst_base->cond == 0xE || CondPassed(cpu, inst_base->cond)) {
             ldst_inst* inst_cream = (ldst_inst*)inst_base->component;
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
-            cpu->Reg[BITS(inst_cream->inst, 12, 15)] = Memory::Read16(addr);
+
+            cpu->Reg[BITS(inst_cream->inst, 12, 15)] = ReadMemory16(cpu, addr);
             if (BITS(inst_cream->inst, 12, 15) == 15) {
                 INC_PC(sizeof(ldst_inst));
                 goto DISPATCH;
@@ -4671,7 +4701,8 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
         if (inst_base->cond == 0xE || CondPassed(cpu, inst_base->cond)) {
             ldst_inst* inst_cream = (ldst_inst*)inst_base->component;
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
-            unsigned int value = Memory::Read16(addr);
+
+            unsigned int value = ReadMemory16(cpu, addr);
             if (BIT(value, 15)) {
                 value |= 0xffff0000;
             }
@@ -4692,7 +4723,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             ldst_inst* inst_cream = (ldst_inst*)inst_base->component;
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 1);
 
-            unsigned int value = Memory::Read32(addr);
+            unsigned int value = ReadMemory32(cpu, addr);
             cpu->Reg[BITS(inst_cream->inst, 12, 15)] = value;
 
             if (BITS(inst_cream->inst, 12, 15) == 15) {
@@ -4714,94 +4745,8 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             if (inst_cream->Rd == 15) {
                 DEBUG_MSG;
             } else {
-                if (inst_cream->cp_num == 15) {
-                    if (CRn == 1 && CRm == 0 && OPCODE_2 == 0) {
-                        CP15_REG(CP15_CONTROL) = RD;
-                    } else if (CRn == 1 && CRm == 0 && OPCODE_2 == 1) {
-                        CP15_REG(CP15_AUXILIARY_CONTROL) = RD;
-                    } else if (CRn == 1 && CRm == 0 && OPCODE_2 == 2) {
-                        CP15_REG(CP15_COPROCESSOR_ACCESS_CONTROL) = RD;
-                    } else if (CRn == 2 && CRm == 0 && OPCODE_2 == 0) {
-                        CP15_REG(CP15_TRANSLATION_BASE_TABLE_0) = RD;
-                    } else if (CRn == 2 && CRm == 0 && OPCODE_2 == 1) {
-                        CP15_REG(CP15_TRANSLATION_BASE_TABLE_1) = RD;
-                    } else if (CRn == 2 && CRm == 0 && OPCODE_2 == 2) {
-                        CP15_REG(CP15_TRANSLATION_BASE_CONTROL) = RD;
-                    } else if (CRn == 3 && CRm == 0 && OPCODE_2 == 0) {
-                        CP15_REG(CP15_DOMAIN_ACCESS_CONTROL) = RD;
-                    } else if(CRn == MMU_CACHE_OPS){
-                        //LOG_WARNING(Core_ARM11, "cache operations have not implemented.");
-                    } else if(CRn == MMU_TLB_OPS){
-                        switch (CRm) {
-                        case 5: // ITLB
-                            switch(OPCODE_2) {
-                            case 0: // Invalidate all
-                                LOG_DEBUG(Core_ARM11, "{TLB} [INSN] invalidate all");
-                                break;
-                            case 1: // Invalidate by MVA
-                                LOG_DEBUG(Core_ARM11, "{TLB} [INSN] invalidate by mva");
-                                break;
-                            case 2: // Invalidate by asid
-                                LOG_DEBUG(Core_ARM11, "{TLB} [INSN] invalidate by asid");
-                                break;
-                            default:
-                                break;
-                            }
-
-                            break;
-                        case 6: // DTLB
-                            switch(OPCODE_2){
-                            case 0: // Invalidate all
-                                LOG_DEBUG(Core_ARM11, "{TLB} [DATA] invalidate all");
-                                break;
-                            case 1: // Invalidate by MVA
-                                LOG_DEBUG(Core_ARM11, "{TLB} [DATA] invalidate by mva");
-                                break;
-                            case 2: // Invalidate by asid
-                                LOG_DEBUG(Core_ARM11, "{TLB} [DATA] invalidate by asid");
-                                break;
-                            default:
-                                break;
-                            }
-                            break;
-                        case 7: // UNIFILED TLB
-                            switch(OPCODE_2){
-                            case 0: // invalidate all
-                                LOG_DEBUG(Core_ARM11, "{TLB} [UNIFILED] invalidate all");
-                                break;
-                            case 1: // Invalidate by MVA
-                                LOG_DEBUG(Core_ARM11, "{TLB} [UNIFILED] invalidate by mva");
-                                break;
-                            case 2: // Invalidate by asid
-                                LOG_DEBUG(Core_ARM11, "{TLB} [UNIFILED] invalidate by asid");
-                                break;
-                            default:
-                                break;
-                            }
-                            break;
-                        default:
-                            break;
-                        }
-                    } else if(CRn == MMU_PID) {
-                        if(OPCODE_2 == 0) {
-                            CP15_REG(CP15_PID) = RD;
-                        } else if(OPCODE_2 == 1) {
-                            CP15_REG(CP15_CONTEXT_ID) = RD;
-                        } else if (OPCODE_2 == 2) {
-                            CP15_REG(CP15_THREAD_UPRW) = RD;
-                        } else if(OPCODE_2 == 3) {
-                            if (InAPrivilegedMode(cpu))
-                                CP15_REG(CP15_THREAD_URO) = RD;
-                        } else if (OPCODE_2 == 4) {
-                            if (InAPrivilegedMode(cpu))
-                                CP15_REG(CP15_THREAD_PRW) = RD;
-                        } else {
-                            LOG_ERROR(Core_ARM11, "mmu_mcr wrote UNKNOWN - reg %d", CRn);
-                        }
-                    } else {
-                        LOG_ERROR(Core_ARM11, "mcr CRn=%d, CRm=%d OP2=%d is not implemented", CRn, CRm, OPCODE_2);
-                    }
-                }
+                if (inst_cream->cp_num == 15)
+                    WriteCP15Register(cpu, RD, CRn, OPCODE_1, CRm, OPCODE_2);
             }
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
@@ -4876,50 +4821,8 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 CITRA_IGNORE_EXIT(-1);
                 goto END;
             } else {
-                if (inst_cream->cp_num == 15) {
-                    if(CRn == 0 && OPCODE_2 == 0 && CRm == 0) {
-                        RD = cpu->CP15[CP15(CP15_MAIN_ID)];
-                    } else if (CRn == 0 && CRm == 0 && OPCODE_2 == 1) {
-                        RD = cpu->CP15[CP15(CP15_CACHE_TYPE)];
-                    } else if (CRn == 1 && CRm == 0 && OPCODE_2 == 0) {
-                        RD = cpu->CP15[CP15(CP15_CONTROL)];
-                    } else if (CRn == 1 && CRm == 0 && OPCODE_2 == 1) {
-                        RD = cpu->CP15[CP15(CP15_AUXILIARY_CONTROL)];
-                    } else if (CRn == 1 && CRm == 0 && OPCODE_2 == 2) {
-                        RD = cpu->CP15[CP15(CP15_COPROCESSOR_ACCESS_CONTROL)];
-                    } else if (CRn == 2 && CRm == 0 && OPCODE_2 == 0) {
-                        RD = cpu->CP15[CP15(CP15_TRANSLATION_BASE_TABLE_0)];
-                    } else if (CRn == 2 && CRm == 0 && OPCODE_2 == 1) {
-                        RD = cpu->CP15[CP15(CP15_TRANSLATION_BASE_TABLE_1)];
-                    } else if (CRn == 2 && CRm == 0 && OPCODE_2 == 2) {
-                        RD = cpu->CP15[CP15(CP15_TRANSLATION_BASE_CONTROL)];
-                    } else if (CRn == 3 && CRm == 0 && OPCODE_2 == 0) {
-                        RD = cpu->CP15[CP15(CP15_DOMAIN_ACCESS_CONTROL)];
-                    } else if (CRn == 5 && CRm == 0 && OPCODE_2 == 0) {
-                        RD = cpu->CP15[CP15(CP15_FAULT_STATUS)];
-                    } else if (CRn == 5 && CRm == 0 && OPCODE_2 == 1) {
-                        RD = cpu->CP15[CP15(CP15_INSTR_FAULT_STATUS)];
-                    } else if (CRn == 6 && CRm == 0 && OPCODE_2 == 0) {
-                        RD = cpu->CP15[CP15(CP15_FAULT_ADDRESS)];
-                    } else if (CRn == 13) {
-                        if(OPCODE_2 == 0) {
-                            RD = CP15_REG(CP15_PID);
-                        } else if(OPCODE_2 == 1) {
-                            RD = CP15_REG(CP15_CONTEXT_ID);
-                        } else if (OPCODE_2 == 2) {
-                            RD = CP15_REG(CP15_THREAD_UPRW);
-                        } else if(OPCODE_2 == 3) {
-                            RD = Memory::KERNEL_MEMORY_VADDR;
-                        } else if (OPCODE_2 == 4) {
-                            if (InAPrivilegedMode(cpu))
-                                RD = CP15_REG(CP15_THREAD_PRW);
-                        } else {
-                            LOG_ERROR(Core_ARM11, "mmu_mrr wrote UNKNOWN - reg %d", CRn);
-                        }
-                    } else {
-                        LOG_ERROR(Core_ARM11, "mrc CRn=%d, CRm=%d, OP2=%d is not implemented", CRn, CRm, OPCODE_2);
-                    }
-                }
+                if (inst_cream->cp_num == 15)
+                     RD = ReadCP15Register(cpu, CRn, OPCODE_1, CRm, OPCODE_2);
             }
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
@@ -5274,6 +5177,20 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
     }
 
     RFE_INST:
+    {
+        // RFE is unconditional
+        ldst_inst* const inst_cream = (ldst_inst*)inst_base->component;
+
+        u32 address = 0;
+        inst_cream->get_addr(cpu, inst_cream->inst, address, 1);
+
+        cpu->Cpsr    = ReadMemory32(cpu, address);
+        cpu->Reg[15] = ReadMemory32(cpu, address + 4);
+
+        INC_PC(sizeof(ldst_inst));
+        goto DISPATCH;
+    }
+
     RSB_INST:
     {
         if (inst_base->cond == 0xE || CondPassed(cpu, inst_base->cond)) {
@@ -5521,6 +5438,23 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
     }
 
     SETEND_INST:
+    {
+        // SETEND is unconditional
+        setend_inst* const inst_cream = (setend_inst*)inst_base->component;
+        const bool big_endian = (inst_cream->set_bigend == 1);
+
+        if (big_endian)
+            cpu->Cpsr |= (1 << 9);
+        else
+            cpu->Cpsr &= ~(1 << 9);
+
+        LOG_WARNING(Core_ARM11, "SETEND %s executed", big_endian ? "BE" : "LE");
+
+        cpu->Reg[15] += GET_INST_SIZE(cpu);
+        INC_PC(sizeof(setend_inst));
+        FETCH_INST;
+        GOTO_NEXT_INST;
+    }
 
     SHADD8_INST:
     SHADD16_INST:
@@ -5898,6 +5832,21 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
     }
 
     SRS_INST:
+    {
+        // SRS is unconditional
+        ldst_inst* const inst_cream = (ldst_inst*)inst_base->component;
+
+        u32 address = 0;
+        inst_cream->get_addr(cpu, inst_cream->inst, address, 1);
+
+        WriteMemory32(cpu, address + 0, cpu->Reg[14]);
+        WriteMemory32(cpu, address + 4, cpu->Spsr_copy);
+
+        cpu->Reg[15] += GET_INST_SIZE(cpu);
+        INC_PC(sizeof(ldst_inst));
+        FETCH_INST;
+        GOTO_NEXT_INST;
+    }
 
     SSAT_INST:
     {
@@ -5976,36 +5925,36 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             if (BIT(inst_cream->inst, 22) == 1) {
                 for (int i = 0; i < 13; i++) {
                     if (BIT(inst_cream->inst, i)) {
-                        Memory::Write32(addr, cpu->Reg[i]);
+                        WriteMemory32(cpu, addr, cpu->Reg[i]);
                         addr += 4;
                     }
                 }
                 if (BIT(inst_cream->inst, 13)) {
                     if (cpu->Mode == USER32MODE)
-                        Memory::Write32(addr, cpu->Reg[13]);
+                        WriteMemory32(cpu, addr, cpu->Reg[13]);
                     else
-                        Memory::Write32(addr, cpu->Reg_usr[0]);
+                        WriteMemory32(cpu, addr, cpu->Reg_usr[0]);
 
                     addr += 4;
                 }
                 if (BIT(inst_cream->inst, 14)) {
                     if (cpu->Mode == USER32MODE)
-                        Memory::Write32(addr, cpu->Reg[14]);
+                        WriteMemory32(cpu, addr, cpu->Reg[14]);
                     else
-                        Memory::Write32(addr, cpu->Reg_usr[1]);
+                        WriteMemory32(cpu, addr, cpu->Reg_usr[1]);
 
                     addr += 4;
                 }
                 if (BIT(inst_cream->inst, 15)) {
-                    Memory::Write32(addr, cpu->Reg_usr[1] + 8);
+                    WriteMemory32(cpu, addr, cpu->Reg_usr[1] + 8);
                 }
             } else {
                 for (int i = 0; i < 15; i++) {
                     if (BIT(inst_cream->inst, i)) {
                         if (i == Rn)
-                            Memory::Write32(addr, old_RN);
+                            WriteMemory32(cpu, addr, old_RN);
                         else
-                            Memory::Write32(addr, cpu->Reg[i]);
+                            WriteMemory32(cpu, addr, cpu->Reg[i]);
 
                         addr += 4;
                     }
@@ -6013,7 +5962,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
 
                 // Check PC reg
                 if (BIT(inst_cream->inst, 15))
-                    Memory::Write32(addr, cpu->Reg_usr[1] + 8);
+                    WriteMemory32(cpu, addr, cpu->Reg_usr[1] + 8);
             }
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
@@ -6046,7 +5995,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 0);
 
             unsigned int value = cpu->Reg[BITS(inst_cream->inst, 12, 15)];
-            Memory::Write32(addr, value);
+            WriteMemory32(cpu, addr, value);
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
         INC_PC(sizeof(ldst_inst));
@@ -6109,10 +6058,10 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             ldst_inst* inst_cream = (ldst_inst*)inst_base->component;
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 0);
 
-            unsigned int value = cpu->Reg[BITS(inst_cream->inst, 12, 15)];
-            Memory::Write32(addr, value);
-            value = cpu->Reg[BITS(inst_cream->inst, 12, 15) + 1];
-            Memory::Write32(addr + 4, value);
+            // The 3DS doesn't have the Large Physical Access Extension (LPAE)
+            // so STRD wouldn't store these as a single write.
+            WriteMemory32(cpu, addr + 0, cpu->Reg[BITS(inst_cream->inst, 12, 15)]);
+            WriteMemory32(cpu, addr + 4, cpu->Reg[BITS(inst_cream->inst, 12, 15) + 1]);
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
         INC_PC(sizeof(ldst_inst));
@@ -6129,7 +6078,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 remove_exclusive(cpu, write_addr);
                 cpu->exclusive_state = 0;
 
-                Memory::Write32(write_addr, cpu->Reg[inst_cream->Rm]);
+                WriteMemory32(cpu, write_addr, RM);
                 RD = 0;
             } else {
                 // Failed to write due to mutex access
@@ -6173,8 +6122,16 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 remove_exclusive(cpu, write_addr);
                 cpu->exclusive_state = 0;
 
-                Memory::Write32(write_addr, cpu->Reg[inst_cream->Rm]);
-                Memory::Write32(write_addr + 4, cpu->Reg[inst_cream->Rm + 1]);
+                const u32 rt  = cpu->Reg[inst_cream->Rm + 0];
+                const u32 rt2 = cpu->Reg[inst_cream->Rm + 1];
+                u64 value;
+
+                if (InBigEndianMode(cpu))
+                    value = (((u64)rt << 32) | rt2);
+                else
+                    value = (((u64)rt2 << 32) | rt);
+
+                WriteMemory64(cpu, write_addr, value);
                 RD = 0;
             }
             else {
@@ -6197,7 +6154,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 remove_exclusive(cpu, write_addr);
                 cpu->exclusive_state = 0;
 
-                Memory::Write16(write_addr, cpu->Reg[inst_cream->Rm]);
+                WriteMemory16(cpu, write_addr, RM);
                 RD = 0;
             } else {
                 // Failed to write due to mutex access
@@ -6216,7 +6173,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 0);
 
             unsigned int value = cpu->Reg[BITS(inst_cream->inst, 12, 15)] & 0xffff;
-            Memory::Write16(addr, value);
+            WriteMemory16(cpu, addr, value);
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
         INC_PC(sizeof(ldst_inst));
@@ -6230,7 +6187,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             inst_cream->get_addr(cpu, inst_cream->inst, addr, 0);
 
             unsigned int value = cpu->Reg[BITS(inst_cream->inst, 12, 15)];
-            Memory::Write32(addr, value);
+            WriteMemory32(cpu, addr, value);
         }
         cpu->Reg[15] += GET_INST_SIZE(cpu);
         INC_PC(sizeof(ldst_inst));
@@ -6275,7 +6232,7 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
     SWI_INST:
     {
         if (inst_base->cond == 0xE || CondPassed(cpu, inst_base->cond)) {
-            HLE::CallSVC(Memory::Read32(cpu->Reg[15]));
+            SVC::CallSVC(Memory::Read32(cpu->Reg[15]));
         }
 
         cpu->Reg[15] += GET_INST_SIZE(cpu);
@@ -6289,8 +6246,8 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
             swp_inst* inst_cream = (swp_inst*)inst_base->component;
 
             addr = RN;
-            unsigned int value = Memory::Read32(addr);
-            Memory::Write32(addr, RM);
+            unsigned int value = ReadMemory32(cpu, addr);
+            WriteMemory32(cpu, addr, RM);
 
             RD = value;
         }
@@ -6533,24 +6490,24 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 s16 sum4 = ((rn_val >> 24) & 0xFF) + ((rm_val >> 24) & 0xFF);
 
                 if (sum1 >= 0x100)
-                    state->Cpsr |= (1 << 16);
+                    cpu->Cpsr |= (1 << 16);
                 else
-                    state->Cpsr &= ~(1 << 16);
+                    cpu->Cpsr &= ~(1 << 16);
 
                 if (sum2 >= 0x100)
-                    state->Cpsr |= (1 << 17);
+                    cpu->Cpsr |= (1 << 17);
                 else
-                    state->Cpsr &= ~(1 << 17);
+                    cpu->Cpsr &= ~(1 << 17);
 
                 if (sum3 >= 0x100)
-                    state->Cpsr |= (1 << 18);
+                    cpu->Cpsr |= (1 << 18);
                 else
-                    state->Cpsr &= ~(1 << 18);
+                    cpu->Cpsr &= ~(1 << 18);
 
                 if (sum4 >= 0x100)
-                    state->Cpsr |= (1 << 19);
+                    cpu->Cpsr |= (1 << 19);
                 else
-                    state->Cpsr &= ~(1 << 19);
+                    cpu->Cpsr &= ~(1 << 19);
 
                 lo_result = ((sum1 & 0xFF) | (sum2 & 0xFF) << 8);
                 hi_result = ((sum3 & 0xFF) | (sum4 & 0xFF) << 8);
@@ -6563,24 +6520,24 @@ unsigned InterpreterMainLoop(ARMul_State* state) {
                 s16 diff4 = ((rn_val >> 24) & 0xFF) - ((rm_val >> 24) & 0xFF);
 
                 if (diff1 >= 0)
-                    state->Cpsr |= (1 << 16);
+                    cpu->Cpsr |= (1 << 16);
                 else
-                    state->Cpsr &= ~(1 << 16);
+                    cpu->Cpsr &= ~(1 << 16);
 
                 if (diff2 >= 0)
-                    state->Cpsr |= (1 << 17);
+                    cpu->Cpsr |= (1 << 17);
                 else
-                    state->Cpsr &= ~(1 << 17);
+                    cpu->Cpsr &= ~(1 << 17);
 
                 if (diff3 >= 0)
-                    state->Cpsr |= (1 << 18);
+                    cpu->Cpsr |= (1 << 18);
                 else
-                    state->Cpsr &= ~(1 << 18);
+                    cpu->Cpsr &= ~(1 << 18);
 
                 if (diff4 >= 0)
-                    state->Cpsr |= (1 << 19);
+                    cpu->Cpsr |= (1 << 19);
                 else
-                    state->Cpsr &= ~(1 << 19);
+                    cpu->Cpsr &= ~(1 << 19);
 
                 lo_result = (diff1 & 0xFF) | ((diff2 & 0xFF) << 8);
                 hi_result = (diff3 & 0xFF) | ((diff4 & 0xFF) << 8);

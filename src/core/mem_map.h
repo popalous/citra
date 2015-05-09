@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "common/common.h"
 #include "common/common_types.h"
-
-#include "core/hle/kernel/kernel.h"
 
 namespace Memory {
 
@@ -27,10 +24,16 @@ enum : u32 {
     MPCORE_PRIV_PADDR_END       = (MPCORE_PRIV_PADDR + MPCORE_PRIV_SIZE),
 
     FCRAM_SIZE                  = 0x08000000,   ///< FCRAM size
-    FCRAM_PADDR                 = 0x20000000,                       ///< FCRAM physical address
-    FCRAM_PADDR_END             = (FCRAM_PADDR + FCRAM_SIZE),       ///< FCRAM end of physical space
-    FCRAM_VADDR                 = 0x08000000,                       ///< FCRAM virtual address
-    FCRAM_VADDR_END             = (FCRAM_VADDR + FCRAM_SIZE),       ///< FCRAM end of virtual space
+    FCRAM_PADDR                 = 0x20000000,   ///< FCRAM physical address
+    FCRAM_PADDR_END             = (FCRAM_PADDR + FCRAM_SIZE),
+
+    HEAP_SIZE                   = FCRAM_SIZE,   ///< Application heap size
+    HEAP_VADDR                  = 0x08000000,
+    HEAP_VADDR_END              = (HEAP_VADDR + HEAP_SIZE),
+
+    HEAP_LINEAR_SIZE            = FCRAM_SIZE,
+    HEAP_LINEAR_VADDR           = 0x14000000,
+    HEAP_LINEAR_VADDR_END       = (HEAP_LINEAR_VADDR + HEAP_LINEAR_SIZE),
     
     AXI_WRAM_SIZE               = 0x00080000,   ///< AXI WRAM size
     AXI_WRAM_PADDR              = 0x1FF80000,   ///< AXI WRAM physical address
@@ -64,18 +67,6 @@ enum : u32 {
     SYSTEM_MEMORY_SIZE          = 0x02C00000,   ///< 44MB
     SYSTEM_MEMORY_VADDR         = 0x04000000,
     SYSTEM_MEMORY_VADDR_END     = (SYSTEM_MEMORY_VADDR + SYSTEM_MEMORY_SIZE),
-
-    HEAP_SIZE                   = FCRAM_SIZE,   ///< Application heap size
-    //HEAP_PADDR                  = HEAP_GSP_SIZE,
-    //HEAP_PADDR_END              = (HEAP_PADDR + HEAP_SIZE),
-    HEAP_VADDR                  = 0x08000000,
-    HEAP_VADDR_END              = (HEAP_VADDR + HEAP_SIZE),
-
-    HEAP_LINEAR_SIZE            = 0x08000000,   ///< Linear heap size... TODO: Define correctly?
-    HEAP_LINEAR_VADDR           = 0x14000000,
-    HEAP_LINEAR_VADDR_END       = (HEAP_LINEAR_VADDR + HEAP_LINEAR_SIZE),
-    HEAP_LINEAR_PADDR           = 0x00000000,
-    HEAP_LINEAR_PADDR_END       = (HEAP_LINEAR_PADDR + HEAP_LINEAR_SIZE),
 
     HARDWARE_IO_SIZE            = 0x01000000,
     HARDWARE_IO_PADDR           = 0x10000000,                       ///< IO physical address start
@@ -114,18 +105,6 @@ struct MemoryBlock {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Base is a pointer to the base of the memory map. Yes, some MMU tricks
-// are used to set up a full GC or Wii memory map in process memory.  on
-// 32-bit, you have to mask your offsets with 0x3FFFFFFF. This means that
-// some things are mirrored too many times, but eh... it works.
-
-// In 64-bit, this might point to "high memory" (above the 32-bit limit),
-// so be sure to load it into a 64-bit register.
-extern u8 *g_base;
-
-// These are guaranteed to point to "low memory" addresses (sub-32-bit).
-// 64-bit: Pointers to low-mem (sub-0x10000000) mirror
-// 32-bit: Same as the corresponding physical/virtual pointers.
 extern u8* g_heap_linear;   ///< Linear heap (main memory)
 extern u8* g_heap;          ///< Application heap (main memory)
 extern u8* g_vram;          ///< Video memory (VRAM)
@@ -147,6 +126,7 @@ inline void Write(VAddr addr, T data);
 u8 Read8(VAddr addr);
 u16 Read16(VAddr addr);
 u32 Read32(VAddr addr);
+u64 Read64(VAddr addr);
 
 u32 Read8_ZX(VAddr addr);
 u32 Read16_ZX(VAddr addr);
@@ -175,6 +155,12 @@ u32 MapBlock_Heap(u32 size, u32 operation, u32 permissions);
  * @param permissions Control memory permissions
  */
 u32 MapBlock_HeapLinear(u32 size, u32 operation, u32 permissions);
+
+/// Initialize mapped memory blocks
+void MemBlock_Init();
+
+/// Shutdown mapped memory blocks
+void MemBlock_Shutdown();
 
 inline const char* GetCharPointer(const VAddr address) {
     return (const char *)GetPointer(address);

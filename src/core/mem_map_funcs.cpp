@@ -4,7 +4,9 @@
 
 #include <map>
 
-#include "common/common.h"
+#include "common/common_types.h"
+#include "common/logging/log.h"
+#include "common/swap.h"
 
 #include "core/mem_map.h"
 #include "core/hw/hw.h"
@@ -15,7 +17,6 @@ namespace Memory {
 
 static std::map<u32, MemoryBlock> heap_map;
 static std::map<u32, MemoryBlock> heap_linear_map;
-static std::map<u32, MemoryBlock> shared_map;
 
 /// Convert a physical address to virtual address
 VAddr PhysicalToVirtualAddress(const PAddr addr) {
@@ -23,10 +24,12 @@ VAddr PhysicalToVirtualAddress(const PAddr addr) {
     // to virtual address translations here. This is quite hacky, but necessary until we implement
     // proper MMU emulation.
     // TODO: Screw it, I'll let bunnei figure out how to do this properly.
-    if ((addr >= VRAM_PADDR) && (addr < VRAM_PADDR_END)) {
+    if (addr == 0) {
+        return 0;
+    } else if ((addr >= VRAM_PADDR) && (addr < VRAM_PADDR_END)) {
         return addr - VRAM_PADDR + VRAM_VADDR;
-    }else if ((addr >= FCRAM_PADDR) && (addr < FCRAM_PADDR_END)) {
-        return addr - FCRAM_PADDR + FCRAM_VADDR;
+    } else if ((addr >= FCRAM_PADDR) && (addr < FCRAM_PADDR_END)) {
+        return addr - FCRAM_PADDR + HEAP_LINEAR_VADDR;
     }
 
     LOG_ERROR(HW_Memory, "Unknown physical address @ 0x%08x", addr);
@@ -39,10 +42,12 @@ PAddr VirtualToPhysicalAddress(const VAddr addr) {
     // to virtual address translations here. This is quite hacky, but necessary until we implement
     // proper MMU emulation.
     // TODO: Screw it, I'll let bunnei figure out how to do this properly.
-    if ((addr >= VRAM_VADDR) && (addr < VRAM_VADDR_END)) {
-        return addr - 0x07000000;
-    } else if ((addr >= FCRAM_VADDR) && (addr < FCRAM_VADDR_END)) {
-        return addr - FCRAM_VADDR + FCRAM_PADDR;
+    if (addr == 0) {
+        return 0;
+    } else if ((addr >= VRAM_VADDR) && (addr < VRAM_VADDR_END)) {
+        return addr - VRAM_VADDR + VRAM_PADDR;
+    } else if ((addr >= HEAP_LINEAR_VADDR) && (addr < HEAP_LINEAR_VADDR_END)) {
+        return addr - HEAP_LINEAR_VADDR + FCRAM_PADDR;
     }
 
     LOG_ERROR(HW_Memory, "Unknown virtual address @ 0x%08x", addr);
@@ -181,12 +186,6 @@ u8 *GetPointer(const VAddr vaddr) {
     }
 }
 
-/**
- * Maps a block of memory on the heap
- * @param size Size of block in bytes
- * @param operation Memory map operation type
- * @param flags Memory allocation flags
- */
 u32 MapBlock_Heap(u32 size, u32 operation, u32 permissions) {
     MemoryBlock block;
 
@@ -204,12 +203,6 @@ u32 MapBlock_Heap(u32 size, u32 operation, u32 permissions) {
     return block.GetVirtualAddress();
 }
 
-/**
- * Maps a block of memory on the linear heap
- * @param size Size of block in bytes
- * @param operation Memory map operation type
- * @param flags Memory allocation flags
- */
 u32 MapBlock_HeapLinear(u32 size, u32 operation, u32 permissions) {
     MemoryBlock block;
 
@@ -225,6 +218,14 @@ u32 MapBlock_HeapLinear(u32 size, u32 operation, u32 permissions) {
     heap_linear_map[block.GetVirtualAddress()] = block;
 
     return block.GetVirtualAddress();
+}
+
+void MemBlock_Init() {
+}
+
+void MemBlock_Shutdown() {
+    heap_map.clear();
+    heap_linear_map.clear();
 }
 
 u8 Read8(const VAddr addr) {
@@ -243,6 +244,12 @@ u32 Read32(const VAddr addr) {
     u32_le data = 0;
     Read<u32_le>(data, addr);
     return (u32)data;
+}
+
+u64 Read64(const VAddr addr) {
+    u64_le data = 0;
+    Read<u64_le>(data, addr);
+    return (u64)data;
 }
 
 u32 Read8_ZX(const VAddr addr) {

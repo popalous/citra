@@ -9,8 +9,6 @@
 
 #include <boost/range/algorithm_ext/erase.hpp>
 
-#include "common/common.h"
-
 namespace Common {
 
 template<class T, unsigned int N>
@@ -38,6 +36,18 @@ struct ThreadQueueList {
         }
 
         return -1;
+    }
+
+    T get_first() {
+        Queue *cur = first;
+        while (cur != nullptr) {
+            if (!cur->data.empty()) {
+                return cur->data.front();
+            }
+            cur = cur->next_nonempty;
+        }
+
+        return T();
     }
 
     T pop_first() {
@@ -77,6 +87,12 @@ struct ThreadQueueList {
     void push_back(Priority priority, const T& thread_id) {
         Queue *cur = &queues[priority];
         cur->data.push_back(thread_id);
+    }
+
+    void move(const T& thread_id, Priority old_priority, Priority new_priority) {
+        remove(old_priority, thread_id);
+        prepare(new_priority);
+        push_back(new_priority, thread_id);
     }
 
     void remove(Priority priority, const T& thread_id) {

@@ -2,6 +2,8 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include "common/logging/log.h"
+
 #include "core/hle/hle.h"
 #include "core/hle/kernel/event.h"
 #include "core/hle/service/dsp_dsp.h"
@@ -11,7 +13,7 @@
 
 namespace DSP_DSP {
 
-static u32 read_pipe_count    = 0;
+static u32 read_pipe_count;
 static Kernel::SharedPtr<Kernel::Event> semaphore_event;
 static Kernel::SharedPtr<Kernel::Event> interrupt_event;
 
@@ -42,7 +44,7 @@ static void ConvertProcessAddressFromDspDram(Service::Interface* self) {
     cmd_buff[1] = 0; // No error
     cmd_buff[2] = (addr << 1) + (Memory::DSP_MEMORY_VADDR + 0x40000);
 
-    LOG_WARNING(Service_DSP, "(STUBBED) called with address %u", addr);
+    LOG_WARNING(Service_DSP, "(STUBBED) called with address 0x%08X", addr);
 }
 
 /**
@@ -60,12 +62,19 @@ static void ConvertProcessAddressFromDspDram(Service::Interface* self) {
 static void LoadComponent(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
 
+    u32 size       = cmd_buff[1];
+    u32 unk1       = cmd_buff[2];
+    u32 unk2       = cmd_buff[3];
+    u32 new_size   = cmd_buff[4];
+    u32 buffer     = cmd_buff[5];
+
     cmd_buff[1] = 0; // No error
     cmd_buff[2] = 1; // Pretend that we actually loaded the DSP firmware
 
     // TODO(bunnei): Implement real DSP firmware loading
 
-    LOG_WARNING(Service_DSP, "(STUBBED) called");
+    LOG_WARNING(Service_DSP, "(STUBBED) called size=0x%X, unk1=0x%08X, unk2=0x%08X, new_size=0x%X, buffer=0x%08X",
+                size, unk1, unk2, new_size, buffer);
 }
 
 /**
@@ -84,6 +93,33 @@ static void GetSemaphoreEventHandle(Service::Interface* self) {
 }
 
 /**
+ * DSP_DSP::FlushDataCache service function
+ *
+ * This Function is a no-op, We aren't emulating the CPU cache any time soon.
+ *
+ *  Inputs:
+ *      1 : Address
+ *      2 : Size
+ *      3 : Value 0, some descriptor for the KProcess Handle
+ *      4 : KProcess handle
+ *  Outputs:
+ *      1 : Result of function, 0 on success, otherwise error code
+ */
+static void FlushDataCache(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+    u32 address = cmd_buff[1];
+    u32 size    = cmd_buff[2];
+    u32 process = cmd_buff[4];
+
+    // TODO(purpasmart96): Verify return header on HW
+
+    cmd_buff[1] = RESULT_SUCCESS.raw; // No error
+
+    LOG_DEBUG(Service_DSP, "(STUBBED) called address=0x%08X, size=0x%X, process=0x%08X",
+              address, size, process);
+}
+
+/**
  * DSP_DSP::RegisterInterruptEvents service function
  *  Inputs:
  *      1 : Parameter 0 (purpose unknown)
@@ -94,6 +130,10 @@ static void GetSemaphoreEventHandle(Service::Interface* self) {
  */
 static void RegisterInterruptEvents(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
+
+    u32 param0 = cmd_buff[1];
+    u32 param1 = cmd_buff[2];
+    u32 event_handle = cmd_buff[4];
 
     auto evt = Kernel::g_handle_table.Get<Kernel::Event>(cmd_buff[4]);
     if (evt != nullptr) {
@@ -106,7 +146,7 @@ static void RegisterInterruptEvents(Service::Interface* self) {
         cmd_buff[1] = -1;
     }
 
-    LOG_WARNING(Service_DSP, "(STUBBED) called");
+    LOG_WARNING(Service_DSP, "(STUBBED) called param0=%u, param1=%u, event_handle=0x%08X", param0, param1, event_handle);
 }
 
 /**
@@ -147,7 +187,7 @@ static void WriteProcessPipe(Service::Interface* self) {
 
     cmd_buff[1] = RESULT_SUCCESS.raw; // No error
 
-    LOG_WARNING(Service_DSP, "(STUBBED) called number=%u, size=0x%08X, new_size=0x%08X, buffer=0x%08X",
+    LOG_WARNING(Service_DSP, "(STUBBED) called number=%u, size=0x%X, new_size=0x%X, buffer=0x%08X",
                 number, size, new_size, buffer);
 }
 
@@ -165,6 +205,8 @@ static void WriteProcessPipe(Service::Interface* self) {
 static void ReadPipeIfPossible(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
 
+    u32 unk1 = cmd_buff[1];
+    u32 unk2 = cmd_buff[2];
     u32 size = cmd_buff[3] & 0xFFFF;// Lower 16 bits are size
     VAddr addr = cmd_buff[0x41];
 
@@ -190,7 +232,8 @@ static void ReadPipeIfPossible(Service::Interface* self) {
     cmd_buff[1] = 0; // No error
     cmd_buff[2] = (read_pipe_count - initial_size) * sizeof(u16);
 
-    LOG_WARNING(Service_DSP, "(STUBBED) called size=0x%08X, buffer=0x%08X", size, addr);
+    LOG_WARNING(Service_DSP, "(STUBBED) called unk1=0x%08X, unk2=0x%08X, size=0x%X, buffer=0x%08X",
+                unk1, unk2, size, addr);
 }
 
 /**
@@ -225,7 +268,7 @@ static void GetHeadphoneStatus(Service::Interface* self) {
     cmd_buff[1] = RESULT_SUCCESS.raw; // No error
     cmd_buff[2] = 0; // Not using headphones?
 
-    LOG_WARNING(Service_DSP, "(STUBBED) called");
+    LOG_DEBUG(Service_DSP, "(STUBBED) called");
 }
 
 const Interface::FunctionInfo FunctionTable[] = {
@@ -242,7 +285,7 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x001000C0, ReadPipeIfPossible,               "ReadPipeIfPossible"},
     {0x001100C2, LoadComponent,                    "LoadComponent"},
     {0x00120000, nullptr,                          "UnloadComponent"},
-    {0x00130082, nullptr,                          "FlushDataCache"},
+    {0x00130082, FlushDataCache,                   "FlushDataCache"},
     {0x00140082, nullptr,                          "InvalidateDCache"},
     {0x00150082, RegisterInterruptEvents,          "RegisterInterruptEvents"},
     {0x00160000, GetSemaphoreEventHandle,          "GetSemaphoreEventHandle"},

@@ -22,11 +22,12 @@ public:
     void SetReg(int index, u32 value) override;
     u32 GetCPSR() const override;
     void SetCPSR(u32 cpsr) override;
+    u32 GetCP15Register(CP15Register reg) override;
+    void SetCP15Register(CP15Register reg, u32 value) override;
 
-    u64 GetTicks() const override;
     void AddTicks(u64 ticks) override;
 
-    void ResetContext(Core::ThreadContext& context, u32 stack_top, u32 entry_point, u32 arg);
+    void ResetContext(Core::ThreadContext& context, u32 stack_top, u32 entry_point, u32 arg) override;
     void SaveContext(Core::ThreadContext& ctx) override;
     void LoadContext(const Core::ThreadContext& ctx) override;
 

@@ -4,7 +4,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include "common/common.h"
+#include "common/logging/log.h"
 
 #include "video_core/video_core.h"
 
@@ -24,16 +24,14 @@ void EmuWindow_GLFW::OnMouseButtonEvent(GLFWwindow* win, int button, int action,
         glfwGetCursorPos(win, &x, &y);
 
         if (action == GLFW_PRESS)
-            emu_window->TouchPressed(layout, static_cast<u16>(x), static_cast<u16>(y));
+            emu_window->TouchPressed(static_cast<unsigned>(x), static_cast<unsigned>(y));
         else if (action == GLFW_RELEASE)
             emu_window->TouchReleased();
     }
 }
 
 void EmuWindow_GLFW::OnCursorPosEvent(GLFWwindow* win, double x, double y) {
-    auto emu_window = GetEmuWindow(win);
-    auto layout = emu_window->GetFramebufferLayout();
-    emu_window->TouchMoved(layout, static_cast<u16>(x), static_cast<u16>(y));
+    GetEmuWindow(win)->TouchMoved(static_cast<unsigned>(std::max(x, 0.0)), static_cast<unsigned>(std::max(y, 0.0)));
 }
 
 /// Called by GLFW when a key event occurs

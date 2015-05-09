@@ -4,11 +4,14 @@
 
 #include <map>
 
+#include "common/logging/log.h"
+#include "common/profiler.h"
 #include "common/string_util.h"
 #include "common/symbols.h"
 
-#include "core/arm/arm_interface.h"
+#include "core/core_timing.h"
 #include "core/mem_map.h"
+#include "core/arm/arm_interface.h"
 
 #include "core/hle/kernel/address_arbiter.h"
 #include "core/hle/kernel/event.h"
@@ -282,8 +285,13 @@ static ResultCode ArbitrateAddress(Handle handle, u32 address, u32 type, u32 val
     if (arbiter == nullptr)
         return ERR_INVALID_HANDLE;
 
-    return arbiter->ArbitrateAddress(static_cast<Kernel::ArbitrationType>(type),
-            address, value, nanoseconds);
+    auto res = arbiter->ArbitrateAddress(static_cast<Kernel::ArbitrationType>(type),
+                                         address, value, nanoseconds);
+
+    if (res == RESULT_SUCCESS)
+        HLE::Reschedule(__func__);
+
+    return res;
 }
 
 /// Used to output a message on a debug hardware unit - does nothing on a retail unit
@@ -304,14 +312,14 @@ static ResultCode GetResourceLimit(Handle* resource_limit, Handle process) {
 /// Get resource limit current values
 static ResultCode GetResourceLimitCurrentValues(s64* values, Handle resource_limit, void* names,
     s32 name_count) {
-    LOG_ERROR(Kernel_SVC, "(UNIMPLEMENTED) called resource_limit=%08X, names=%s, name_count=%d",
+    LOG_ERROR(Kernel_SVC, "(UNIMPLEMENTED) called resource_limit=%08X, names=%p, name_count=%d",
         resource_limit, names, name_count);
     Memory::Write32(Core::g_app_core->GetReg(0), 0); // Normmatt: Set used memory to 0 for now
     return RESULT_SUCCESS;
 }
 
 /// Creates a new thread
-static ResultCode CreateThread(u32* out_handle, u32 priority, u32 entry_point, u32 arg, u32 stack_top, u32 processor_id) {
+static ResultCode CreateThread(Handle* out_handle, s32 priority, u32 entry_point, u32 arg, u32 stack_top, s32 processor_id) {
     using Kernel::Thread;
 
     std::string name;
@@ -322,6 +330,27 @@ static ResultCode CreateThread(u32* out_handle, u32 priority, u32 entry_point, u
         name = Common::StringFromFormat("unknown-%08x", entry_point);
     }
 
+    // TODO(bunnei): Implement resource limits to return an error code instead of the below assert.
+    // The error code should be: Description::NotAuthorized, Module::OS, Summary::WrongArgument,
+    // Level::Permanent
+    ASSERT_MSG(priority >= THREADPRIO_USERLAND_MAX, "Unexpected thread priority!");
+
+    if (priority > THREADPRIO_LOWEST) {
+        return ResultCode(ErrorDescription::OutOfRange, ErrorModule::OS,
+                          ErrorSummary::InvalidArgument, ErrorLevel::Usage);
+    }
+
+    switch (processor_id) {
+    case THREADPROCESSORID_DEFAULT:
+    case THREADPROCESSORID_0:
+    case THREADPROCESSORID_1:
+        break;
+    default:
+        // TODO(bunnei): Implement support for other processor IDs
+        ASSERT_MSG(false, "Unsupported thread processor ID: %d", processor_id);
+        break;
+    }
+
     CASCADE_RESULT(SharedPtr<Thread> thread, Kernel::Thread::Create(
             name, entry_point, priority, arg, processor_id, stack_top));
     CASCADE_RESULT(*out_handle, Kernel::g_handle_table.Create(std::move(thread)));
@@ -330,10 +359,7 @@ static ResultCode CreateThread(u32* out_handle, u32 priority, u32 entry_point, u
         "threadpriority=0x%08X, processorid=0x%08X : created handle=0x%08X", entry_point,
         name.c_str(), arg, stack_top, priority, processor_id, *out_handle);
 
-    if (THREADPROCESSORID_1 == processor_id) {
-        LOG_WARNING(Kernel_SVC,
-            "thread designated for system CPU core (UNIMPLEMENTED) will be run with app core scheduling");
-    }
+    HLE::Reschedule(__func__);
 
     return RESULT_SUCCESS;
 }
@@ -373,8 +399,11 @@ static ResultCode CreateMutex(Handle* out_handle, u32 initial_locked) {
     SharedPtr<Mutex> mutex = Mutex::Create(initial_locked != 0);
     CASCADE_RESULT(*out_handle, Kernel::g_handle_table.Create(std::move(mutex)));
 
+    HLE::Reschedule(__func__);
+
     LOG_TRACE(Kernel_SVC, "called initial_locked=%s : created handle=0x%08X",
         initial_locked ? "true" : "false", *out_handle);
+    
     return RESULT_SUCCESS;
 }
 
@@ -389,6 +418,9 @@ static ResultCode ReleaseMutex(Handle handle) {
         return ERR_INVALID_HANDLE;
 
     mutex->Release();
+
+    HLE::Reschedule(__func__);
+
     return RESULT_SUCCESS;
 }
 
@@ -427,6 +459,9 @@ static ResultCode ReleaseSemaphore(s32* count, Handle handle, s32 release_count)
         return ERR_INVALID_HANDLE;
 
     CASCADE_RESULT(*count, semaphore->Release(release_count));
+
+    HLE::Reschedule(__func__);
+
     return RESULT_SUCCESS;
 }
 
@@ -519,6 +554,9 @@ static ResultCode SetTimer(Handle handle, s64 initial, s64 interval) {
         return ERR_INVALID_HANDLE;
 
     timer->Set(initial, interval);
+
+    HLE::Reschedule(__func__);
+
     return RESULT_SUCCESS;
 }
 
@@ -533,6 +571,9 @@ static ResultCode CancelTimer(Handle handle) {
         return ERR_INVALID_HANDLE;
 
     timer->Cancel();
+
+    HLE::Reschedule(__func__);
+
     return RESULT_SUCCESS;
 }
 
@@ -551,7 +592,7 @@ static void SleepThread(s64 nanoseconds) {
 
 /// This returns the total CPU ticks elapsed since the CPU was powered-on
 static s64 GetSystemTick() {
-    return (s64)Core::g_app_core->GetTicks();
+    return (s64)CoreTiming::GetTicks();
 }
 
 /// Creates a memory block at the specified address with the specified permissions and size
@@ -567,7 +608,17 @@ static ResultCode CreateMemoryBlock(Handle* out_handle, u32 addr, u32 size, u32 
     return RESULT_SUCCESS;
 }
 
-const HLE::FunctionDef SVC_Table[] = {
+namespace {
+    struct FunctionDef {
+        using Func = void();
+
+        u32         id;
+        Func*       func;
+        const char* name;
+    };
+}
+
+static const FunctionDef SVC_Table[] = {
     {0x00, nullptr,                         "Unknown"},
     {0x01, HLE::Wrap<ControlMemory>,        "ControlMemory"},
     {0x02, HLE::Wrap<QueryMemory>,          "QueryMemory"},
@@ -696,8 +747,28 @@ const HLE::FunctionDef SVC_Table[] = {
     {0x7D, nullptr,                         "QueryProcessMemory"},
 };
 
-void Register() {
-    HLE::RegisterModule("SVC_Table", ARRAY_SIZE(SVC_Table), SVC_Table);
+Common::Profiling::TimingCategory profiler_svc("SVC Calls");
+
+static const FunctionDef* GetSVCInfo(u32 opcode) {
+    u32 func_num = opcode & 0xFFFFFF; // 8 bits
+    if (func_num >= ARRAY_SIZE(SVC_Table)) {
+        LOG_ERROR(Kernel_SVC, "unknown svc=0x%02X", func_num);
+        return nullptr;
+    }
+    return &SVC_Table[func_num];
+}
+
+void CallSVC(u32 opcode) {
+    Common::Profiling::ScopeTimer timer_svc(profiler_svc);
+
+    const FunctionDef *info = GetSVCInfo(opcode);
+    if (info) {
+        if (info->func) {
+            info->func();
+        } else {
+            LOG_ERROR(Kernel_SVC, "unimplemented SVC function %s(..)", info->name);
+        }
+    }
 }
 
 } // namespace

@@ -6,8 +6,10 @@
 #include "core/hw/hw.h"
 #include "core/hw/lcd.h"
 #include "core/mem_map.h"
+#include "core/settings.h"
 
 #include "common/emu_window.h"
+#include "common/logging/log.h"
 #include "common/profiler_reporting.h"
 
 #include "video_core/video_core.h"
@@ -219,7 +221,8 @@ void RendererOpenGL::LoadColorToActiveGLTexture(u8 color_r, u8 color_g, u8 color
  * Initializes the OpenGL state and creates persistent objects.
  */
 void RendererOpenGL::InitOpenGLObjects() {
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(Settings::values.bg_red, Settings::values.bg_green, Settings::values.bg_blue, 0.0f);
+    glDisable(GL_DEPTH_TEST);
 
     // Link shaders and get variable locations
     program_id = ShaderUtil::LoadShaders(GLShaders::g_vertex_shader, GLShaders::g_fragment_shader);

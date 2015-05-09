@@ -2,7 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#include "common/common.h"
+#include "common/logging/log.h"
 
 #include "core/mem_map.h"
 #include "core/hle/kernel/shared_memory.h"
@@ -16,6 +16,7 @@ SharedPtr<SharedMemory> SharedMemory::Create(std::string name) {
     SharedPtr<SharedMemory> shared_memory(new SharedMemory);
 
     shared_memory->name = std::move(name);
+    shared_memory->base_address = 0x0;
 
     return shared_memory;
 }
