@@ -115,15 +115,6 @@ public:
     }
 
     /**
-     * Gets the current touch screen state (touch X/Y coordinates and whether or not it is pressed)
-     * @return std::tuple of (x, y, pressed) where `x` and `y` are the touch coordinates and
-     *         `pressed` is true if the touch screen is currently being pressed
-     */
-    std::tuple<u16, u16, bool> GetTouchState() const {
-        return std::make_tuple(touch_x, touch_y, touch_pressed);
-    }
-
-    /**
      * Returns currently active configuration.
      * @note Accesses to the returned object need not be consistent because it may be modified in another thread
      */
