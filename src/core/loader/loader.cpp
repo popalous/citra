@@ -72,8 +72,6 @@ static FileType GuessFromExtension(const std::string& extension_) {
         return FileType::CXI;
     else if (extension == ".cci")
         return FileType::CCI;
-    else if (extension == ".bin")
-        return FileType::BIN;
     else if (extension == ".3ds")
         return FileType::CCI;
     else if (extension == ".3dsx")
@@ -91,8 +89,6 @@ static const char* GetFileTypeString(FileType type) {
         return "ELF";
     case FileType::THREEDSX:
         return "3DSX";
-    case FileType::BIN:
-        return "raw";
     case FileType::Error:
     case FileType::Unknown:
         break;
