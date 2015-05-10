@@ -698,7 +698,7 @@ void RendererOpenGL::BeginBatch() {
                 {
                     for (int j = 0; j < info.height; j++)
                     {
-                        rgba_tex[i + info.width * j] = Pica::DebugUtils::LookupTexture(Memory::GetPointer(Pica::PAddrToVAddr(tex_paddr)), i, info.height - 1 - j, info);
+                        rgba_tex[i + info.width * j] = Pica::DebugUtils::LookupTexture(Memory::GetPhysicalPointer(tex_paddr), i, info.height - 1 - j, info);
                     }
                 }
 

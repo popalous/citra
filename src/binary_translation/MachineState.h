@@ -22,7 +22,7 @@ public:
 
     void GenerateGlobals();
     // allow_pc exists because most of the times reading the PC is not what the instruction meant
-    llvm::Value *ReadRegiser(Register reg, bool allow_pc = false);
+    llvm::Value *ReadRegiser(Register reg, bool allow_pc = true);
     llvm::Value *WriteRegiser(Register reg, llvm::Value *value);
     llvm::Value* ConditionPassed(Condition cond);
     llvm::Value* ReadMemory32(llvm::Value* address);
