@@ -1,5 +1,7 @@
 #include "ARMFuncs.h"
+#include <list>
 #include "InstructionBlock.h"
+#include "common/logging/log.h"
 
 ARMFuncs::ShiftTN ARMFuncs::DecodeImmShift(InstructionBlock* instruction, u32 type, u32 imm5)
 {
@@ -14,7 +16,7 @@ ARMFuncs::ShiftTN ARMFuncs::DecodeImmShift(InstructionBlock* instruction, u32 ty
             return{ SRType::ROR, ir_builder->getInt32(imm5) };
         else
             return{ SRType::RRX, ir_builder->getInt32(1) };
-    default: assert(false, "Invalid shift type");
+    default: LOG_CRITICAL(BinaryTranslator, "Invalid shift type");
     }
 }
 
@@ -36,7 +38,7 @@ ARMFuncs::ResultCarry ARMFuncs::Shift_C(InstructionBlock* instruction, llvm::Val
     case SRType::ASR: result_amount_not_zero = ASR_C(instruction, value, amount); break;
     case SRType::ROR: result_amount_not_zero = ROR_C(instruction, value, amount); break;
     case SRType::RRX: result_amount_not_zero = RRX_C(instruction, value, carry_in); break;
-    default: assert(false, "Invalid shift type");
+    default: LOG_CRITICAL(BinaryTranslator, "Invalid shift type");
     }
 
     auto result = ir_builder->CreateSelect(amount_zero, value, result_amount_not_zero.result);

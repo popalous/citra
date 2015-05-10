@@ -4,7 +4,7 @@
 #include "core/core.h"
 #include "core/mem_map.h"
 #include "core/loader/loader.h"
-#include "codegen.h"
+#include "CodeGen.h"
 #include <llvm/Support/CommandLine.h>
 
 namespace cl = llvm::cl;

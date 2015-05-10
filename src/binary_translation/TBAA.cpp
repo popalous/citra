@@ -1,3 +1,4 @@
+#include <cstddef>
 #include "TBAA.h"
 #include <llvm/IR/MDBuilder.h>
 #include <llvm/IR/LLVMContext.h>

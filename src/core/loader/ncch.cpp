@@ -131,14 +131,18 @@ ResultStatus AppLoader_NCCH::LoadExec() const {
         Kernel::g_current_process->ParseKernelCaps(kernel_caps.data(), kernel_caps.size());
 
         Memory::WriteBlock(entry_point, &code[0], code.size());
-		Kernel::LoadExec(entry_point);
 
 		Loader::ROMCodeStart = entry_point;
 		Loader::ROMCodeSize = entry_point + code.size();
 		// TODO: Don't know where these are
 		Loader::ROMReadOnlyDataStart = 0;
 		Loader::ROMReadOnlyDataSize = 0;
-        return ResultStatus::Success;
+		
+		s32 priority = exheader_header.arm11_system_local_caps.priority;
+        u32 stack_size = exheader_header.codeset_info.stack_size;
+        Kernel::g_current_process->Run(entry_point, priority, stack_size);
+        
+		return ResultStatus::Success;
     }
     return ResultStatus::Error;
 }

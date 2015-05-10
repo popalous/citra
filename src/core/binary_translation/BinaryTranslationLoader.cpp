@@ -1,5 +1,6 @@
 #include "BinaryTranslationLoader.h"
 #include "core/arm/skyeye_common/armdefs.h"
+#include "common/logging/log.h" 
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -16,7 +17,7 @@ ARMul_State *g_state;
 
 std::unique_ptr<SectionMemoryManager> g_memory_manager;
 std::unique_ptr<RuntimeDyld> g_dyld;
-std::unique_ptr<RuntimeDyld::LoadedObjectInfo> g_loaded_object_info;
+ObjectImage* g_loaded_object_info;
 
 void(*g_run_function)();
 bool(*g_can_run_function)();
@@ -98,15 +99,16 @@ void BinaryTranslationLoader::Load(FileUtil::IOFile& file)
         LOG_WARNING(Loader, "Cannot read optimized file");
         return;
     }
-
-    auto object_file = object::ObjectFile::createObjectFile(MemoryBufferRef(StringRef(buffer.get(), size), ""));
+	
+	std::unique_ptr<MemoryBuffer> buff = std::unique_ptr<MemoryBuffer>(MemoryBuffer::getMemBuffer(StringRef(buffer.get(), size), ""));
+    auto object_file = object::ObjectFile::createObjectFile(buff);
     if (!object_file)
     {
         LOG_WARNING(Loader, "Cannot load optimized file");
         return;
     }
 
-    g_loaded_object_info = g_dyld->loadObject(*object_file->get());
+    g_loaded_object_info = (g_dyld->loadObject(std::unique_ptr<object::ObjectFile>((*object_file))));
     if (g_dyld->hasError())
     {
         LOG_WARNING(Loader, "Cannot load optimized file, error %s", g_dyld->getErrorString().str().c_str());
@@ -117,8 +119,8 @@ void BinaryTranslationLoader::Load(FileUtil::IOFile& file)
     g_dyld->registerEHFrames();
     g_memory_manager->finalizeMemory();
 
-    g_run_function = static_cast<decltype(g_run_function)>(g_dyld->getSymbolAddress("Run"));
-    g_can_run_function = static_cast<decltype(g_can_run_function)>(g_dyld->getSymbolAddress("CanRun"));
+    g_run_function = reinterpret_cast<decltype(g_run_function)>(g_dyld->getSymbolAddress("Run"));
+    g_can_run_function = reinterpret_cast<decltype(g_can_run_function)>(g_dyld->getSymbolAddress("CanRun"));
     auto verify_ptr = static_cast<bool*>(g_dyld->getSymbolAddress("Verify"));
     g_instruction_count = static_cast<uint32_t *>(g_dyld->getSymbolAddress("InstructionCount"));
     auto memory_read_32_ptr = static_cast<decltype(&Memory::Read32) *>(g_dyld->getSymbolAddress("Memory::Read32"));

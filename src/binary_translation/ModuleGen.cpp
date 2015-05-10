@@ -4,9 +4,12 @@
 #include "core/mem_map.h"
 #include "Instructions/Instruction.h"
 #include "Instructions/Types.h"
+#include <list>
 #include "InstructionBlock.h"
+#include "common/logging/log.h"
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Module.h>
 #include <stack>
 #include "MachineState.h"
 #include "TBAA.h"
@@ -14,14 +17,25 @@
 
 using namespace llvm;
 
+#define OLD_C
+#ifdef OLD_C
+namespace std{
+	template<typename T, typename... Args>
+	std::unique_ptr<T> make_unique(Args&&... args)
+	{
+		return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+	}
+}
+#endif
+
 ModuleGen::ModuleGen(llvm::Module* module, bool verify)
     : module(module),
       verify(verify)
 {
-    ir_builder = make_unique<IRBuilder<>>(getGlobalContext());
-    machine = make_unique<MachineState>(this);
-    tbaa = make_unique<TBAA>();
-    block_colors = make_unique<BlockColors>(this);
+    ir_builder = std::make_unique<IRBuilder<>>(getGlobalContext());
+    machine = std::make_unique<MachineState>(this);
+    tbaa = std::make_unique<TBAA>();
+    block_colors = std::make_unique<BlockColors>(this);
 }
 
 ModuleGen::~ModuleGen()
@@ -127,7 +141,7 @@ void ModuleGen::GenerateGlobals()
 
 void ModuleGen::GenerateBlockAddressArray()
 {
-    auto local_block_address_array_values = std::make_unique<Constant*[]>(block_address_array_size);
+    auto local_block_address_array_values = std::unique_ptr<Constant*[]>(new Constant*[block_address_array_size]);
     
     std::fill(
         local_block_address_array_values.get(),

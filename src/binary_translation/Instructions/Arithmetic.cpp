@@ -1,3 +1,4 @@
+#include <list>
 #include "Arithmetic.h"
 #include "Disassembler.h"
 #include <binary_translation/ARMFuncs.h>

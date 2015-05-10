@@ -181,7 +181,7 @@ u8 *GetPointer(const VAddr vaddr) {
         return g_vram + (vaddr - VRAM_VADDR);
 
     } else {
-        LOG_ERROR(HW_Memory, "unknown GetPointer @ 0x%08x", vaddr);
+        //LOG_ERROR(HW_Memory, "unknown GetPointer @ 0x%08x", vaddr);
         return 0;
     }
 }

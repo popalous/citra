@@ -1,3 +1,4 @@
+#include <list>
 #include "Instruction.h"
 #include "common/logging/log.h"
 #include <cassert>

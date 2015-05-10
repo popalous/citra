@@ -1,3 +1,4 @@
+#include <list>
 #include "MovShift.h"
 #include "Disassembler.h"
 #include "InstructionBlock.h"

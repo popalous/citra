@@ -1,6 +1,6 @@
 #include "CodeGen.h"
 #include "ModuleGen.h"
-
+#include "common/logging/log.h"
 #include "core/loader/loader.h"
 
 #include <llvm/Support/TargetSelect.h>
@@ -8,6 +8,7 @@
 #include <llvm/Target/TargetSubtargetInfo.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/PassManager.h>
 #include <llvm/IR/Verifier.h>
@@ -15,8 +16,20 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
 #include <iostream>
+#include <memory>
 
 using namespace llvm;
+
+#define OLD_C
+#ifdef OLD_C
+namespace std{
+	template<typename T, typename... Args>
+	std::unique_ptr<T> make_unique(Args&&... args)
+	{
+		return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+	}
+}
+#endif
 
 CodeGen::CodeGen(const char* output_object_filename, const char* output_debug_filename, bool verify)
     : output_object_filename(output_object_filename),
@@ -56,14 +69,15 @@ void CodeGen::InitializeLLVM()
     triple_string += "-elf";
 #endif
 
-    triple = llvm::make_unique<Triple>(triple_string);
+    triple = std::make_unique<Triple>(triple_string);
 
     // This engine builder is needed to get the target machine. It requires a module
     // but takes ownership of it so the main module cannot be passed here.
-    EngineBuilder engine_builder(make_unique<Module>("", getGlobalContext()));
+	std::unique_ptr<Module> engine_builder_module = std::make_unique<Module>("", getGlobalContext());
+    EngineBuilder engine_builder(engine_builder_module.get());
     target_machine.reset(engine_builder.selectTarget(*triple, "", "", SmallVector<std::string, 0>()));
 
-    module = make_unique<Module>("Module", getGlobalContext());
+    module = std::make_unique<Module>("Module", getGlobalContext());
     module->setTargetTriple(triple_string);
 }
 
@@ -114,14 +128,14 @@ void CodeGen::OptimizeAndGenerate()
 
     FunctionPassManager function_pass_manager(module.get());
     PassManager pass_manager;
-
-    module->setDataLayout(target_machine->getSubtargetImpl()->getDataLayout());
+	
+	module->setDataLayout(target_machine->getDataLayout());
 
     pass_manager.add(createVerifierPass());
     pass_manager.add(new TargetLibraryInfo(*triple));
-    pass_manager.add(new DataLayoutPass());
+    pass_manager.add(new DataLayoutPass(module.get()));
     target_machine->addAnalysisPasses(pass_manager);
-    function_pass_manager.add(new DataLayoutPass());
+    function_pass_manager.add(new DataLayoutPass(module.get()));
     target_machine->addAnalysisPasses(function_pass_manager);
 
     pass_manager_builder.OptLevel = 3;
@@ -131,6 +145,12 @@ void CodeGen::OptimizeAndGenerate()
     pass_manager_builder.SLPVectorize = true;
 
     pass_manager_builder.populateFunctionPassManager(function_pass_manager);
+	
+	pass_manager_builder.OptLevel = 1;
+    pass_manager_builder.SizeLevel = 0;
+    pass_manager_builder.LoopVectorize = false;
+    pass_manager_builder.SLPVectorize = false;
+	
     pass_manager_builder.populateModulePassManager(pass_manager);
 
     LOG_INFO(BinaryTranslator, "Optimizing functions");

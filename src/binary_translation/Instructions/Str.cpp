@@ -1,3 +1,4 @@
+#include <list>
 #include "Str.h"
 #include "Disassembler.h"
 #include "InstructionBlock.h"

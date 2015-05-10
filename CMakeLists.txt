@@ -200,8 +200,28 @@ option(ENABLE_BINARY_TRANSLATION "Enable binary translation. Requires LLVM" OFF)
 if(ENABLE_BINARY_TRANSLATION)
     add_definitions(-DENABLE_BINARY_TRANSLATION)
     find_package(LLVM REQUIRED CONFIG)
-    include_directories(${LLVM_INCLUDE_DIRS})
-    add_definitions(${LLVM_DEFINITIONS})
-    llvm_map_components_to_libnames(llvm_libs Core Support X86 ExecutionEngine MCJIT BitWriter ipo)
+    if(NOT DEFINED LLVM_PACKAGE_VERSION)
+		set(LLVM_PACKAGE_VERSION "0")
+	endif()
+    if(${LLVM_PACKAGE_VERSION} VERSION_LESS "3.5")
+		
+		set(LLVM_LIB_PATH "/usr/lib64/llvm/")
+		set(llvm_libs
+			${LLVM_LIB_PATH}/libLLVMSupport.a
+			${LLVM_LIB_PATH}/libLLVMCore.a
+			${LLVM_LIB_PATH}/libLLVMX86CodeGen.a
+			${LLVM_LIB_PATH}/libLLVMX86AsmPrinter.a
+			${LLVM_LIB_PATH}/libLLVMX86AsmParser.a
+			${LLVM_LIB_PATH}/libLLVMX86Disassembler.a
+			${LLVM_LIB_PATH}/libLLVMExecutionEngine.a
+			${LLVM_LIB_PATH}/libLLVMMCJIT.a
+			${LLVM_LIB_PATH}/libLLVMBitWriter.a
+			${LLVM_LIB_PATH}/libLLVMipo.a
+		)
+    else()
+        include_directories(${LLVM_INCLUDE_DIRS})
+        add_definitions(${LLVM_DEFINITIONS})
+        llvm_map_components_to_libnames(llvm_libs Core Support native Target MCJIT ExecutionEngine BitWriter ipo)
+    endif()
 endif()
 add_subdirectory(src)

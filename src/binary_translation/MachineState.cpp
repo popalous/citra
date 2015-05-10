@@ -1,6 +1,7 @@
 #include "MachineState.h"
 #include "ModuleGen.h"
 #include "Instructions/Types.h"
+#include "common/logging/log.h"
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LLVMContext.h>
@@ -78,12 +79,12 @@ Value* MachineState::ConditionPassed(Condition cond)
 {
     auto ir_builder = module->IrBuilder();
     Value *pred = nullptr;
-    auto not = false;
+    auto _not = false;
     switch (cond)
     {
     case Condition::NE: case Condition::CC: case Condition::PL: case Condition::VC:
     case Condition::LS: case Condition::LT: case Condition::LE:
-        not = true;
+        _not = true;
         cond = (Condition)((int)cond - 1);
     }
 
@@ -98,10 +99,10 @@ Value* MachineState::ConditionPassed(Condition cond)
     case Condition::GT: pred = ir_builder->CreateAnd(ir_builder->CreateNot(ReadRegiser(Register::Z)),
         ir_builder->CreateICmpEQ(ReadRegiser(Register::N), ReadRegiser(Register::V))); break;
     case Condition::AL: pred = ir_builder->getInt1(true);
-    default: assert(false, "Invalid condition");
+    default: LOG_CRITICAL(BinaryTranslator,"Invalid condition");
     }
 
-    if (not) pred = ir_builder->CreateNot(pred);
+    if (_not) pred = ir_builder->CreateNot(pred);
     return pred;
 }
 

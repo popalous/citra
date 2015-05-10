@@ -28,6 +28,12 @@ u32 ROMCodeSize;
 u32 ROMReadOnlyDataStart;
 u32 ROMReadOnlyDataSize;
 
+const std::initializer_list<Kernel::AddressMapping> default_address_mappings = {
+    { 0x1FF50000,   0x8000, true  }, // part of DSP RAM
+    { 0x1FF70000,   0x8000, true  }, // part of DSP RAM
+    { 0x1F000000, 0x600000, false }, // entire VRAM
+};
+
 /**
  * Identifies the type of a bootable file
  * @param file open file
@@ -126,12 +132,12 @@ ResultStatus LoadFile(const std::string& filename) {
 
     //3DSX file format...
     case FileType::THREEDSX:
-        status = AppLoader_THREEDSX(std::move(file)).Load();
+        status = AppLoader_THREEDSX(std::move(file), filename_filename).Load();
         break;
 
     // Standard ELF file format...
     case FileType::ELF:
-        status = AppLoader_ELF(std::move(file)).Load();
+        status = AppLoader_ELF(std::move(file), filename_filename).Load();
         break;
 
     // NCCH/NCSD container formats...
@@ -145,25 +151,6 @@ ResultStatus LoadFile(const std::string& filename) {
             Service::FS::RegisterArchiveType(Common::make_unique<FileSys::ArchiveFactory_RomFS>(app_loader), Service::FS::ArchiveIdCode::RomFS);
             status = ResultStatus::Success;
         }
-        break;
-    }
-
-    // Raw BIN file format...
-    case FileType::BIN:
-    {
-        Kernel::g_current_process = Kernel::Process::Create(filename_filename, 0);
-        Kernel::g_current_process->svc_access_mask.set();
-        Kernel::g_current_process->address_mappings = default_address_mappings;
-
-        size_t size = (size_t)file->GetSize();
-        if (file->ReadBytes(Memory::GetPointer(Memory::EXEFS_CODE_VADDR), size) != size)
-        {
-            status = ResultStatus::Error;
-            break;
-        }
-
-        Kernel::LoadExec(Memory::EXEFS_CODE_VADDR);
-        status = ResultStatus::Success;
         break;
     }
 

@@ -1,3 +1,5 @@
+#include <cstddef>
+#include <list>
 #include "BlockColors.h"
 #include <stack>
 #include "InstructionBlock.h"
@@ -89,7 +91,8 @@ void BlockColors::AddBasicBlocksToFunction(Function* function, BasicBlock* basic
         auto top = basic_blocks.top();
         basic_blocks.pop();
 
-        top->insertInto(function);
+		iplist<BasicBlock>& list = function->getBasicBlockList();
+		list.insert(list.end(),top);
         auto terminator = top->getTerminator();
         for (auto i = 0; i < terminator->getNumSuccessors(); ++i)
         {
