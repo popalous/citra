@@ -76,6 +76,16 @@ struct ImportTableEntry {
     u32 symbol_offset;
 };
 
+struct ExportTreeEntry {
+    u16 segment_offset;
+    u16 unk;
+    u16 unk2;
+    u16 export_table_id;
+
+    u8 GetTargetSegment() { return segment_offset & 0x7; }
+    u32 GetSegmentOffset() { return segment_offset >> 3; }
+};
+
 struct ExportedSymbol {
     std::string name;
     u32 cro_base;
@@ -86,8 +96,8 @@ struct CROHeader {
     u8 sha2_hash[0x80];
     char magic[4];
     u32 name_offset;
-    u32 previous_cro;
     u32 next_cro;
+    u32 previous_cro;
     u32 file_size;
     INSERT_PADDING_WORDS(0x6);
     u32 segment_offset;
@@ -135,6 +145,8 @@ struct CROHeader {
     ExportTableEntry* GetExportTableEntry(u32 index);
     void RelocateExportsTable(u32 base);
 
+    ExportTreeEntry* GetExportTreeEntry(u32 index);
+
     Patch* GetImportPatch(u32 index);
 
     ImportTableEntry* GetImportTable1Entry(u32 index);
@@ -180,6 +192,10 @@ void CROHeader::RelocateSegmentsTable(u32 base, u32 data_section0, u32 data_sect
             entry->segment_offset += base;
         }
     }
+}
+
+ExportTreeEntry* CROHeader::GetExportTreeEntry(u32 index) {
+    return reinterpret_cast<ExportTreeEntry*>(reinterpret_cast<u8*>(this) + export_tree_offset + sizeof(ExportTreeEntry) * index);
 }
 
 u32 CROHeader::GetUnk1TableEntry(u32 index) {
@@ -421,15 +437,48 @@ static void LoadExportsTable(CROHeader* header, u32 base) {
     }
 }
 
+static u32 GetAddress(CROHeader* header, char* str) {
+    if (header->export_tree_num) {
+        ExportTreeEntry* first_entry = header->GetExportTreeEntry(0);
+        u32 len = strlen(str);
+        ExportTreeEntry* next_entry = header->GetExportTreeEntry(first_entry->unk);
+        bool v16 = false;
+        do {
+            u16 v14 = 0;
+            bool v12 = next_entry->GetSegmentOffset() >= len;
+            if (v12 || !((*(str + next_entry->GetSegmentOffset()) >> next_entry->GetTargetSegment()) & 1))
+                v14 = next_entry->unk;
+            else
+                v14 = next_entry->unk2;
+            v16 = (v14 & 0x8000) == 0;
+            next_entry = header->GetExportTreeEntry(v14 & 0x7FFF);
+        } while (v16);
+
+        u32 export_id = next_entry->export_table_id;
+        ExportTableEntry* export_entry = header->GetExportTableEntry(export_id);
+        char* export_name = (char*)Memory::GetPointer(export_entry->name_offset);
+        if (!strcmp(export_name, str)) {
+            SegmentTableEntry* segment = header->GetSegmentTableEntry(export_entry->GetTargetSegment());
+            return segment->segment_offset + export_entry->GetSegmentOffset();
+        }
+    }
+    return 0;
+}
+
+static void LinkCROs(CROHeader* new_cro, u32 base) {
+    if (!loaded_cros.empty())
+        new_cro->previous_cro = loaded_cros.back();
+
+    if (new_cro->previous_cro) {
+        CROHeader* previous_cro = reinterpret_cast<CROHeader*>(Memory::GetPointer(new_cro->previous_cro));
+        previous_cro->next_cro = base;
+    }
+}
+
 static void LoadCRO(u32 base, u8* cro, bool relocate_segments, u32 data_section0, u32 data_section1) {
     CROHeader* header = reinterpret_cast<CROHeader*>(cro);
     memcpy(header->magic, "FIXD", 4);
 
-    for (int i = 0; i < header->file_size; ++i) {
-        u32* d = (u32*)header + i;
-        if (*d == 0x2020E || *d == 0x2020D)
-            __debugbreak();
-    }
     if (relocate_segments) {
         // Relocate segments
         header->RelocateSegmentsTable(base, data_section0, data_section1);
@@ -480,7 +529,14 @@ static void LoadCRO(u32 base, u8* cro, bool relocate_segments, u32 data_section0
     // Relocate all offsets
     header->RelocateOffsets(base);
 
+    // Link the CROs
+    LinkCROs(header, base);
+
     loaded_cros.push_back(base);
+
+    FileUtil::IOFile file(std::to_string(base) + ".cro", "wb+");
+    file.WriteBytes(header, header->file_size);
+    file.Close();
 }
 
 /**
