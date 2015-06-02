@@ -316,7 +316,7 @@ static void ApplyListPatches(CROHeader* header, Patch* first_patch, u32 patch_ba
         SegmentTableEntry* target_segment = header->GetSegmentTableEntry(current_patch->GetTargetSegment());
         ApplyPatch(current_patch, patch_base, target_segment->segment_offset + current_patch->GetSegmentOffset());
     } while (!(current_patch++)->unk);
-    
+
     first_patch->unk2 = 1;
 }
 
@@ -326,7 +326,7 @@ static void ApplyUnk3Patches(CROHeader* header, u32 base) {
         SegmentTableEntry* segment = header->GetSegmentTableEntry(patch->GetTargetSegment());
         u32 patch_base = segment->segment_offset + patch->GetSegmentOffset();
         u32 patches_table = base + patch->patches_offset;
-        
+
         Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(patches_table));
         ApplyListPatches(header, first_patch, patch_base);
     }
@@ -374,7 +374,7 @@ static void ApplyImportTable1Patches(CROHeader* header, u32 base, bool relocated
             auto export = loaded_exports.find(entry_name);
             if (export == loaded_exports.end())
                 continue;
-            
+
             u32 patch_base = export->second.cro_offset;
 
             Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(entry->symbol_offset));
@@ -620,7 +620,7 @@ static void LoadExeCRO(Service::Interface* self) {
 
     cmd_buff[1] = 0;
     cmd_buff[2] = 0;
-    LOG_WARNING(Service_APT, "Loading CRO");
+    LOG_WARNING(Service_APT, "Loading CRO base=%08X", base);
 }
 
 const Interface::FunctionInfo FunctionTable[] = {
