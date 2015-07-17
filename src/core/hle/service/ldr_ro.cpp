@@ -6,6 +6,8 @@
 
 #include "core/hle/hle.h"
 #include "core/hle/service/ldr_ro.h"
+#include "core/hle/kernel/process.h"
+#include "core/hle/kernel/vm_manager.h"
 #include "common/file_util.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -309,11 +311,11 @@ static void ApplyImportPatches(CROHeader* header, u32 base) {
     }
 }
 
-static void ApplyListPatches(CROHeader* header, Patch* first_patch, u32 patch_base) {
+static void ApplyListPatches(CROHeader* header, Patch* first_patch, u32 patch_base, bool relocated = false) {
     Patch* current_patch = first_patch;
 
     do {
-        SegmentTableEntry* target_segment = header->GetSegmentTableEntry(current_patch->GetTargetSegment());
+        SegmentTableEntry* target_segment = header->GetSegmentTableEntry(current_patch->GetTargetSegment(), relocated);
         ApplyPatch(current_patch, patch_base, target_segment->segment_offset + current_patch->GetSegmentOffset());
     } while (!(current_patch++)->unk);
 
@@ -378,7 +380,7 @@ static void ApplyImportTable1Patches(CROHeader* header, u32 base, bool relocated
             u32 patch_base = export->second.cro_offset;
 
             Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(entry->symbol_offset));
-            ApplyListPatches(header, first_patch, patch_base);
+            ApplyListPatches(header, first_patch, patch_base, relocated);
         }
     }
 }
@@ -409,7 +411,7 @@ static void ApplyUnk2Patches(CROHeader* header, u32 base, bool relocated) {
             SegmentTableEntry* target_base_segment = patch_cro->GetSegmentTableEntry(target_segment_id, relocated);
 
             Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(base + table1_entry->patches_offset));
-            ApplyListPatches(header, first_patch, target_base_segment->segment_offset + target_segment_offset);
+            ApplyListPatches(header, first_patch, target_base_segment->segment_offset + target_segment_offset, relocated);
         }
 
         // Apply the patches from the second table
@@ -420,7 +422,7 @@ static void ApplyUnk2Patches(CROHeader* header, u32 base, bool relocated) {
             SegmentTableEntry* target_base_segment = patch_cro->GetSegmentTableEntry(target_segment_id, relocated);
 
             Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(base + table2_entry->patches_offset));
-            ApplyListPatches(header, first_patch, target_base_segment->segment_offset + target_segment_offset);
+            ApplyListPatches(header, first_patch, target_base_segment->segment_offset + target_segment_offset, relocated);
         }
     }
 }
@@ -472,10 +474,12 @@ static void LinkCROs(CROHeader* new_cro, u32 base) {
     if (new_cro->previous_cro) {
         CROHeader* previous_cro = reinterpret_cast<CROHeader*>(Memory::GetPointer(new_cro->previous_cro));
         previous_cro->next_cro = base;
+    } else {
+        new_cro->previous_cro = base;
     }
 }
 
-static void LoadCRO(u32 base, u8* cro, bool relocate_segments, u32 data_section0, u32 data_section1) {
+static void LoadCRO(u32 base, u8* cro, bool relocate_segments, u32 data_section0, u32 data_section1, bool crs) {
     CROHeader* header = reinterpret_cast<CROHeader*>(cro);
     memcpy(header->magic, "FIXD", 4);
 
@@ -529,8 +533,10 @@ static void LoadCRO(u32 base, u8* cro, bool relocate_segments, u32 data_section0
     // Relocate all offsets
     header->RelocateOffsets(base);
 
-    // Link the CROs
-    LinkCROs(header, base);
+    if (!crs) {
+        // Link the CROs
+        LinkCROs(header, base);
+    }
 
     loaded_cros.push_back(base);
 
@@ -555,24 +561,27 @@ static void Initialize(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
     u8* crs_buffer_ptr = Memory::GetPointer(cmd_buff[1]);
     u32 crs_size       = cmd_buff[2];
-    u8* address        = Memory::GetPointer(cmd_buff[3]);
+    u32 address        = cmd_buff[3];
     u32 value          = cmd_buff[4];
     u32 process        = cmd_buff[5];
 
     if (value != 0) {
-        LOG_ERROR(Service_LDR, "This value should be zero, but is actually %u!", value);
+        LOG_WARNING(Service_LDR, "This value should be zero, but is actually %u!", value);
     }
 
     loaded_exports.clear();
     loaded_cros.clear();
 
-    memcpy(address, crs_buffer_ptr, crs_size);
+    std::shared_ptr<std::vector<u8>> cro = std::make_shared<std::vector<u8>>(crs_size);
+    memcpy(cro->data(), crs_buffer_ptr, crs_size);
 
-    LoadCRO(cmd_buff[3], address, false, 0, 0);
+    // TODO(Subv): Check what the real hardware returns for MemoryState
+    Kernel::g_current_process->address_space->MapMemoryBlock(address, cro, 0, crs_size, Kernel::MemoryState::Code);
 
-    // TODO(purpasmart96): Verify return header on HW
+    LoadCRO(address, Memory::GetPointer(address), false, 0, 0, true);
 
-    cmd_buff[1] = RESULT_SUCCESS.raw; // No error
+    cmd_buff[0] = IPC::MakeHeader(1, 1, 0);
+    cmd_buff[1] = RESULT_SUCCESS.raw;
 
     LOG_WARNING(Service_LDR, "(STUBBED) called. crs_buffer_ptr=0x%08X, crs_size=0x%08X, address=0x%08X, value=0x%08X, process=0x%08X",
                 crs_buffer_ptr, crs_size, address, value, process);
@@ -597,12 +606,11 @@ static void LoadCRR(Service::Interface* self) {
     u32 process        = cmd_buff[4];
 
     if (value != 0) {
-        LOG_ERROR(Service_LDR, "This value should be zero, but is actually %u!", value);
+        LOG_WARNING(Service_LDR, "This value should be zero, but is actually %u!", value);
     }
 
-    // TODO(purpasmart96): Verify return header on HW
-
-    cmd_buff[1] = RESULT_SUCCESS.raw; // No error
+    cmd_buff[0] = IPC::MakeHeader(2, 1, 0);
+    cmd_buff[1] = RESULT_SUCCESS.raw;
 
     LOG_WARNING(Service_LDR, "(STUBBED) called. crs_buffer_ptr=0x%08X, crs_size=0x%08X, value=0x%08X, process=0x%08X",
                 crs_buffer_ptr, crs_size, value, process);
@@ -610,17 +618,56 @@ static void LoadCRR(Service::Interface* self) {
 
 static void LoadExeCRO(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
-    u32 base = cmd_buff[2];
-    u8* dst = Memory::GetPointer(base);
+    u8* cro_buffer = Memory::GetPointer(cmd_buff[1]);
+    u32 address = cmd_buff[2];
     u32 size = cmd_buff[3];
 
-    memcpy(dst, Memory::GetPointer(cmd_buff[1]), size);
+    std::shared_ptr<std::vector<u8>> cro = std::make_shared<std::vector<u8>>(size);
+    memcpy(cro->data(), cro_buffer, size);
 
-    LoadCRO(base, dst, true, cmd_buff[4], cmd_buff[7]);
+    // TODO(Subv): Check what the real hardware returns for MemoryState
+    Kernel::g_current_process->address_space->MapMemoryBlock(address, cro, 0, size, Kernel::MemoryState::Code);
 
-    cmd_buff[1] = 0;
+    LoadCRO(address, Memory::GetPointer(address), true, cmd_buff[4], cmd_buff[7], false);
+
+    cmd_buff[0] = IPC::MakeHeader(4, 2, 0);
+    cmd_buff[1] = RESULT_SUCCESS.raw;
     cmd_buff[2] = 0;
-    LOG_WARNING(Service_APT, "Loading CRO base=%08X", base);
+    LOG_WARNING(Service_LDR, "Loading CRO address=%08X", address);
+}
+
+static void UnloadCRO(Service::Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+    u32 address = cmd_buff[1];
+    CROHeader* unload = reinterpret_cast<CROHeader*>(Memory::GetPointer(address));
+    for (auto itr = loaded_cros.begin(); itr != loaded_cros.end(); ++itr) {
+        if (*itr == address)
+            continue;
+
+        CROHeader* cro = reinterpret_cast<CROHeader*>(Memory::GetPointer(*itr));
+        if (cro->next_cro == address) {
+            cro->next_cro = unload->next_cro;
+            if (unload->next_cro != 0) {
+                CROHeader* next = reinterpret_cast<CROHeader*>(Memory::GetPointer(unload->next_cro));
+                next->previous_cro = *itr;
+            }
+        }
+
+        if (cro->previous_cro == address) {
+            cro->previous_cro = unload->previous_cro;
+            if (unload->previous_cro != 0) {
+                CROHeader* prev = reinterpret_cast<CROHeader*>(Memory::GetPointer(unload->previous_cro));
+                prev->next_cro = *itr;
+            }
+        }
+    }
+
+    loaded_cros.erase(std::remove(loaded_cros.begin(), loaded_cros.end(), address), loaded_cros.end());
+
+    // TODO(Subv): Unload symbols and unmap memory
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+    LOG_WARNING(Service_LDR, "Unloading CRO address=%08X", address);
 }
 
 const Interface::FunctionInfo FunctionTable[] = {
@@ -628,7 +675,7 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x00020082, LoadCRR,               "LoadCRR"},
     {0x00030042, nullptr,               "UnloadCCR"},
     {0x000402C2, LoadExeCRO,            "LoadExeCRO"},
-    {0x000500C2, nullptr,               "LoadCROSymbols"},
+    {0x000500C2, UnloadCRO,             "UnloadCRO"},
     {0x00060042, nullptr,               "CRO_Load?"},
     {0x00070042, nullptr,               "LoadCROSymbols"},
     {0x00080042, nullptr,               "Shutdown"},
