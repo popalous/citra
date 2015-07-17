@@ -283,6 +283,7 @@ Unk2Patch* CROHeader::GetUnk2PatchEntry(u32 index) {
 }
 
 void CROHeader::RelocateOffsets(u32 base) {
+    memcpy(magic, "FIXD", 4);
     segment_table_offset += base;
     export_strings_offset += base;
     export_table_offset += base;
@@ -295,6 +296,9 @@ static void ApplyPatch(Patch* patch, u32 patch_base, u32 patch_address) {
     switch (patch->type) {
         case 2:
             Memory::Write32(patch_address, patch_base + patch->x);
+            break;
+        case 3:
+            Memory::Write32(patch_address, patch_base + patch->x - patch_address);
             break;
         default:
             LOG_CRITICAL(Service_APT, "Unknown patch type %u", patch->type);
@@ -385,12 +389,10 @@ static void ApplyImportTable1Patches(CROHeader* header, u32 base, bool relocated
     }
 }
 
-static u32 GetCROBaseByName(char* name, bool relocated) {
+static u32 GetCROBaseByName(char* name) {
     for (u32 base : loaded_cros) {
         CROHeader* header = reinterpret_cast<CROHeader*>(Memory::GetPointer(base));
-        char* cro_name = reinterpret_cast<char*>(header) + header->name_offset;
-        if (relocated)
-            cro_name = reinterpret_cast<char*>(Memory::GetPointer(header->name_offset));
+        char* cro_name = reinterpret_cast<char*>(Memory::GetPointer(header->name_offset));
 
         if (!strcmp(cro_name, name))
             return base;
@@ -401,7 +403,7 @@ static u32 GetCROBaseByName(char* name, bool relocated) {
 static void ApplyUnk2Patches(CROHeader* header, u32 base, bool relocated) {
     for (int i = 0; i < header->unk2_num; ++i) {
         Unk2Patch* entry = header->GetUnk2PatchEntry(i);
-        u32 cro_base = GetCROBaseByName(reinterpret_cast<char*>(Memory::GetPointer(entry->string_offset)), relocated);
+        u32 cro_base = GetCROBaseByName(reinterpret_cast<char*>(Memory::GetPointer(entry->string_offset)));
         if (cro_base == 0)
             continue;
 
@@ -423,13 +425,9 @@ static void ApplyUnk2Patches(CROHeader* header, u32 base, bool relocated) {
             Unk2TableEntry* table2_entry = entry->GetTable2Entry(j);
             u32 target_segment_id = table2_entry->offset_or_index & 0xF;
             u32 target_segment_offset = table2_entry->offset_or_index >> 4;
-            SegmentTableEntry* target_base_segment = patch_cro->GetSegmentTableEntry(target_segment_id, relocated);
+            SegmentTableEntry* target_base_segment = patch_cro->GetSegmentTableEntry(target_segment_id, true);
 
-            Patch* first_patch = nullptr;
-            if (relocated)
-                first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(table2_entry->patches_offset));
-            else
-                first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(base + table2_entry->patches_offset));
+            Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(table2_entry->patches_offset));
             ApplyListPatches(header, first_patch, target_base_segment->segment_offset + target_segment_offset, relocated);
         }
     }
@@ -489,7 +487,6 @@ static void LinkCROs(CROHeader* new_cro, u32 base) {
 
 static void LoadCRO(u32 base, u8* cro, bool relocate_segments, u32 data_section0, u32 data_section1, bool crs) {
     CROHeader* header = reinterpret_cast<CROHeader*>(cro);
-    memcpy(header->magic, "FIXD", 4);
 
     if (relocate_segments) {
         // Relocate segments
