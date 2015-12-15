@@ -890,18 +890,17 @@ void RasterizerOpenGL::SyncGlobalAmbient() {
 void RasterizerOpenGL::SyncLightingLUT(unsigned lut_index) {
     std::array<std::array<GLfloat, 4>, 256> new_data;
 
-    unsigned lut_group_num = lut_index;
     for (unsigned offset = 0; offset < new_data.size(); ++offset) {
-        new_data[offset][0] = Pica::g_state.lighting.luts[(lut_group_num * 4) + 0][offset].ToFloat();
-        new_data[offset][1] = Pica::g_state.lighting.luts[(lut_group_num * 4) + 1][offset].ToFloat();
-        new_data[offset][2] = Pica::g_state.lighting.luts[(lut_group_num * 4) + 2][offset].ToFloat();
-        new_data[offset][3] = Pica::g_state.lighting.luts[(lut_group_num * 4) + 3][offset].ToFloat();
+        new_data[offset][0] = Pica::g_state.lighting.luts[(lut_index * 4) + 0][offset].ToFloat();
+        new_data[offset][1] = Pica::g_state.lighting.luts[(lut_index * 4) + 1][offset].ToFloat();
+        new_data[offset][2] = Pica::g_state.lighting.luts[(lut_index * 4) + 2][offset].ToFloat();
+        new_data[offset][3] = Pica::g_state.lighting.luts[(lut_index * 4) + 3][offset].ToFloat();
     }
 
-    if (new_data != lighting_lut_data[lut_group_num]) {
-        lighting_lut_data[lut_group_num] = new_data;
-        glActiveTexture(GL_TEXTURE3 + lut_group_num);
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, 256, 0, GL_RGBA, GL_FLOAT, lighting_lut_data[lut_group_num].data());
+    if (new_data != lighting_lut_data[lut_index]) {
+        lighting_lut_data[lut_index] = new_data;
+        glActiveTexture(GL_TEXTURE3 + lut_index);
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, 256, 0, GL_RGBA, GL_FLOAT, lighting_lut_data[lut_index].data());
     }
 }
 
