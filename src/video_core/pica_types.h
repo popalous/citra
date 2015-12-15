@@ -128,8 +128,7 @@ struct float16 {
         float16 ret;
         if ((hex & 0xFFFF) == 0) {
             ret.value = 0;
-        }
-        else {
+        } else {
             u32 mantissa = hex & 0x3FF;
             u32 exponent = (hex >> 10) & 0x1F;
             u32 sign = (hex >> 15) & 1;
@@ -157,8 +156,7 @@ struct float20 {
         float20 ret;
         if ((hex & 0xFFFFF) == 0) {
             ret.value = 0;
-        }
-        else {
+        } else {
             u32 mantissa = hex & 0xFFF;
             u32 exponent = (hex >> 12) & 0x7F;
             u32 sign = (hex >> 19) & 1;
