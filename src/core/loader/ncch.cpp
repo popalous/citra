@@ -165,6 +165,10 @@ ResultStatus AppLoader_NCCH::LoadExec() {
         s32 priority = exheader_header.arm11_system_local_caps.priority;
         u32 stack_size = exheader_header.codeset_info.stack_size;
         Kernel::g_current_process->Run(priority, stack_size);
+        Loader::ROMCodeStart = exheader_header.codeset_info.text.address;
+        Loader::ROMCodeSize = exheader_header.codeset_info.text.num_max_pages * Memory::PAGE_SIZE;
+        Loader::ROMReadOnlyDataStart = exheader_header.codeset_info.ro.address;
+        Loader::ROMReadOnlyDataSize = exheader_header.codeset_info.ro.num_max_pages * Memory::PAGE_SIZE;
         return ResultStatus::Success;
     }
     return ResultStatus::Error;

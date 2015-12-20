@@ -23,6 +23,10 @@
 #include "core/arm/skyeye_common/armsupp.h"
 #include "core/arm/skyeye_common/vfp/vfp.h"
 
+#if ENABLE_BINARY_TRANSLATION
+#include "core/binary_translation/BinaryTranslationLoader.h"
+#endif
+
 #include "core/gdbstub/gdbstub.h"
 
 Common::Profiling::TimingCategory profile_execute("DynCom::Execute");
@@ -36,7 +40,8 @@ enum {
     CALL            = (1 << 4),
     RET             = (1 << 5),
     END_OF_PAGE     = (1 << 6),
-    THUMB           = (1 << 7)
+    THUMB           = (1 << 7),
+    BINARY_TRANSLATED = (1 << 8)
 };
 
 #define RM    BITS(sht_oper, 0, 3)
@@ -3554,6 +3559,12 @@ static int InterpreterTranslate(ARMul_State* cpu, int& bb_start, u32 addr) {
 translated:
         phys_addr += inst_size;
 
+#if ENABLE_BINARY_TRANSLATION
+        if (BinaryTranslationLoader::CanRun(phys_addr, cpu->TFlag))
+        {
+            inst_base->br = BINARY_TRANSLATED;
+        }
+#endif
         if ((phys_addr & 0xfff) == 0) {
             inst_base->br = END_OF_PAGE;
         }
@@ -3584,6 +3595,10 @@ unsigned InterpreterMainLoop(ARMul_State* cpu) {
     MICROPROFILE_SCOPE(DynCom_Execute);
 
     GDBStub::BreakpointAddress breakpoint_data;
+
+#if ENABLE_BINARY_TRANSLATION
+    BinaryTranslationLoader::SetCpuState(cpu);
+#endif
 
     #undef RM
     #undef RS
@@ -3621,17 +3636,24 @@ unsigned InterpreterMainLoop(ARMul_State* cpu) {
 
 // GCC and Clang have a C++ extension to support a lookup table of labels. Otherwise, fallback to a
 // clunky switch statement.
+#if ENABLE_BINARY_TRANSLATION
+#define BINARY_TRANSLATION_VERIFY_CALLBACK BinaryTranslationLoader::VerifyCallback();
+#else
+#define BINARY_TRANSLATION_VERIFY_CALLBACK
+#endif
 #if defined __GNUC__ || defined __clang__
 #define GOTO_NEXT_INST \
     GDB_BP_CHECK; \
     if (num_instrs >= cpu->NumInstrsToExecute) goto END; \
     num_instrs++; \
+    BINARY_TRANSLATION_VERIFY_CALLBACK \
     goto *InstLabel[inst_base->idx]
 #else
 #define GOTO_NEXT_INST \
     GDB_BP_CHECK; \
     if (num_instrs >= cpu->NumInstrsToExecute) goto END; \
     num_instrs++; \
+    BINARY_TRANSLATION_VERIFY_CALLBACK \
     switch(inst_base->idx) { \
     case 0: goto VMLA_INST; \
     case 1: goto VMLS_INST; \
@@ -3905,6 +3927,9 @@ unsigned InterpreterMainLoop(ARMul_State* cpu) {
                 goto END;
             }
         }
+#if ENABLE_BINARY_TRANSLATION
+        num_instrs = BinaryTranslationLoader::Run(num_instrs);
+#endif
 
         if (cpu->TFlag)
             cpu->Reg[15] &= 0xfffffffe;
