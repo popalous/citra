@@ -1,18 +1,18 @@
-#include "ModuleGen.h"
-#include "Disassembler.h"
+#include "module_gen.h"
+#include "disassembler.h"
 #include "core/loader/loader.h"
 #include "core/mem_map.h"
-#include "Instructions/Instruction.h"
-#include "Instructions/Types.h"
-#include "InstructionBlock.h"
+#include "instructions/instruction.h"
+#include "instructions/types.h"
+#include "instruction_block.h"
 #include "common/logging/log.h"
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/ADT/STLExtras.h>
 #include <stack>
-#include "MachineState.h"
-#include "TBAA.h"
-#include "BlockColors.h"
+#include "machine_state.h"
+#include "tbaa.h"
+#include "block_colors.h"
 
 using namespace llvm;
 

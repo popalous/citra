@@ -256,12 +256,12 @@ set(HEADERS
 if(ENABLE_BINARY_TRANSLATION)
     set(SRCS
                 ${SRCS}
-                binary_translation/BinaryTranslationLoader.cpp
+                binary_translation/binary_translation_loader.cpp
                 )
     set(HEADERS
                 ${HEADERS}
                 mem_map.h
-                binary_translation/BinaryTranslationLoader.h
+                binary_translation/binary_translation_loader.h
                 )
 endif()
 create_directory_groups(${SRCS} ${HEADERS})

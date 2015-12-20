@@ -1,7 +1,7 @@
-#include "Arithmetic.h"
-#include "Disassembler.h"
-#include <binary_translation/ARMFuncs.h>
-#include <binary_translation/InstructionBlock.h>
+#include "arithmetic.h"
+#include "disassembler.h"
+#include <binary_translation/ARM_funcs.h>
+#include <binary_translation/instruction_block.h>
 
 static RegisterInstruction<Arithmetic> register_instruction;
 

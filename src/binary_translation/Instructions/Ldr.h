@@ -1,5 +1,5 @@
-#include "Instruction.h"
-#include "Types.h"
+#include "instruction.h"
+#include "types.h"
 #include <bitset>
 
 class Ldr : public Instruction

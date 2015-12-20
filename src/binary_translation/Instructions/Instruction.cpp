@@ -1,10 +1,10 @@
-#include "Instruction.h"
+#include "instruction.h"
 #include "common/logging/log.h"
 #include <cassert>
-#include "InstructionBlock.h"
-#include "ModuleGen.h"
-#include "MachineState.h"
-#include "BinarySearch.h"
+#include "instruction_block.h"
+#include "module_gen.h"
+#include "machine_state.h"
+#include "binary_search.h"
 
 Instruction::Instruction()
 {

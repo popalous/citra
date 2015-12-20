@@ -1,7 +1,7 @@
 #pragma once
 #include "common/common_types.h"
 #include <initializer_list>
-#include "Types.h"
+#include "types.h"
 
 class InstructionBlock;
 
@@ -77,7 +77,6 @@ class Instruction::FieldDefObject
 {
 public:
     typedef void(*WriteFunctionType)(u32 value, void *field_address);
-public:
     // Constant
     FieldDefObject(u32 bit_count, u32 const_value);
     // Field

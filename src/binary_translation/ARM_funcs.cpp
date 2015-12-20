@@ -1,5 +1,5 @@
-#include "ARMFuncs.h"
-#include "InstructionBlock.h"
+#include "ARM_funcs.h"
+#include "instruction_block.h"
 #include <functional>
 
 ARMFuncs::ShiftTN ARMFuncs::DecodeImmShift(InstructionBlock* instruction, u32 type, u32 imm5)

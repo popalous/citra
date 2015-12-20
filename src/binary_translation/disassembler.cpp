@@ -1,5 +1,5 @@
-#include "Disassembler.h"
-#include "Instructions/Instruction.h"
+#include "disassembler.h"
+#include "instructions/instruction.h"
 #include <vector>
 
 std::vector<RegisterInstructionBase::CreateFunctionType> g_read_functions;

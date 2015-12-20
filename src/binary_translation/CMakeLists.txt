@@ -1,40 +1,39 @@
 set(SRCS
             main.cpp
-            CodeGen.cpp
-            ModuleGen.cpp
-            Disassembler.cpp
-            InstructionBlock.cpp
-            MachineState.cpp
-            TBAA.cpp
-            ARMFuncs.cpp
-            BlockColors.cpp
+            code_gen.cpp
+            module_gen.cpp
+            disassembler.cpp
+            instruction_block.cpp
+            machine_state.cpp
+            tbaa.cpp
+            ARM_funcs.cpp
+            block_colors.cpp
 
-            Instructions/Instruction.cpp
-            Instructions/MovShift.cpp
-            Instructions/Branch.cpp
-            Instructions/Arithmetic.cpp
-            Instructions/Ldr.cpp
-            Instructions/Str.cpp
+            instructions/instruction.cpp
+            instructions/mov_shift.cpp
+            instructions/branch.cpp
+            instructions/arithmetic.cpp
+            instructions/ldr.cpp
+            instructions/str.cpp
             )
 set(HEADERS
-            CodeGen.h
-            ModuleGen.h
-            Disassembler.h
-            InstructionBlock.h
-            MachineState.h
-            TBAA.h
-            BinarySearch.h
-            ARMFuncs.h
-            BlockColors.h
+            code_gen.h
+            module_gen.h
+            disassembler.h
+            instruction_block.h
+            machine_state.h
+            tbaa.h
+            binary_search.h
+            ARM_funcs.h
+            block_colors.h
 
-            Instructions/Types.h
-            Instructions/Types.h
-            Instructions/Instruction.h
-            Instructions/MovShift.h
-            Instructions/Branch.h
-            Instructions/Arithmetic.h
-            Instructions/Ldr.h
-            Instructions/Str.h
+            instructions/types.h
+            instructions/instruction.h
+            instructions/mov_shift.h
+            instructions/branch.h
+            instructions/arithmetic.h
+            instructions/ldr.h
+            instructions/str.h
             )
 create_directory_groups(${SRCS} ${HEADERS})
 

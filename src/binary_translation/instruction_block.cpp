@@ -1,9 +1,9 @@
-#include "InstructionBlock.h"
-#include "ModuleGen.h"
-#include "Instructions/Instruction.h"
+#include "instruction_block.h"
+#include "module_gen.h"
+#include "instructions/instruction.h"
 #include <sstream>
 #include <iomanip>
-#include "MachineState.h"
+#include "machine_state.h"
 
 InstructionBlock::InstructionBlock(ModuleGen* module, Instruction* instruction)
     : module(module),

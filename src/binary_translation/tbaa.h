@@ -1,5 +1,5 @@
 #pragma once
-#include "Instructions/Types.h"
+#include "instructions/types.h"
 #include <llvm/IR/Instructions.h>
 
 namespace llvm

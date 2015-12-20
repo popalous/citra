@@ -2,7 +2,7 @@
 #include <string>
 #include <common/common_types.h>
 #include <llvm/IR/IRBuilder.h>
-#include "ModuleGen.h"
+#include "module_gen.h"
 
 namespace llvm
 {

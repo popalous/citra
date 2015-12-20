@@ -1,5 +1,5 @@
-#include "CodeGen.h"
-#include "ModuleGen.h"
+#include "code_gen.h"
+#include "module_gen.h"
 
 #include "core/loader/loader.h"
 #include "common/logging/log.h"

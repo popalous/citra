@@ -1,11 +1,11 @@
-#include "MachineState.h"
-#include "ModuleGen.h"
-#include "Instructions/Types.h"
+#include "machine_state.h"
+#include "module_gen.h"
+#include "instructions/types.h"
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/GlobalVariable.h>
-#include "TBAA.h"
+#include "tbaa.h"
 
 using namespace llvm;
 

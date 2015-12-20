@@ -1,10 +1,10 @@
-#include "Ldr.h"
-#include "Disassembler.h"
-#include "InstructionBlock.h"
+#include "ldr.h"
+#include "disassembler.h"
+#include "instruction_block.h"
 #include <llvm/IR/Value.h>
 #include <core/loader/loader.h>
 #include <core/mem_map.h>
-#include "MachineState.h"
+#include "machine_state.h"
 
 static RegisterInstruction<Ldr> register_instruction;
 

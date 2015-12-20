@@ -1,9 +1,9 @@
-#include "MovShift.h"
-#include "Disassembler.h"
-#include "InstructionBlock.h"
-#include "ModuleGen.h"
-#include "ARMFuncs.h"
-#include <binary_translation/BinarySearch.h>
+#include "mov_shift.h"
+#include "disassembler.h"
+#include "instruction_block.h"
+#include "module_gen.h"
+#include "ARM_funcs.h"
+#include <binary_translation/binary_search.h>
 
 static RegisterInstruction<MovShift> register_instruction;
 

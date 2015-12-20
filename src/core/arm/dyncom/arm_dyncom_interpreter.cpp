@@ -24,7 +24,7 @@
 #include "core/arm/skyeye_common/vfp/vfp.h"
 
 #if ENABLE_BINARY_TRANSLATION
-#include "core/binary_translation/BinaryTranslationLoader.h"
+#include "core/binary_translation/binary_translation_loader.h"
 #endif
 
 #include "core/gdbstub/gdbstub.h"

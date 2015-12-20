@@ -1,7 +1,7 @@
-#include "Branch.h"
-#include "Disassembler.h"
-#include "InstructionBlock.h"
-#include "ModuleGen.h"
+#include "branch.h"
+#include "disassembler.h"
+#include "instruction_block.h"
+#include "module_gen.h"
 
 static RegisterInstruction<Branch> register_instruction;
 

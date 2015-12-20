@@ -1,4 +1,4 @@
-#include "BinaryTranslationLoader.h"
+#include "binary_translation_loader.h"
 #include "core/arm/skyeye_common/armstate.h"
 #include "core/arm/skyeye_common/arm_regformat.h"
 #include "common/logging/log.h"

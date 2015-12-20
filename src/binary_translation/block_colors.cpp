@@ -1,6 +1,6 @@
-#include "BlockColors.h"
+#include "block_colors.h"
 #include <stack>
-#include "InstructionBlock.h"
+#include "instruction_block.h"
 #include <llvm/IR/Function.h>
 #include "common/logging/log.h"
 
