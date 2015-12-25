@@ -139,7 +139,7 @@ struct CROHeader {
     u32 unk4_num;
 
     u8 GetImportPatchesTargetSegment() { return segment_offset & 0xF; }
-    u8 GetImportPatchesSegmentOffset() { return segment_offset >> 4; }
+    u32 GetImportPatchesSegmentOffset() { return segment_offset >> 4; }
 
     SegmentTableEntry* GetSegmentTableEntry(u32 index, bool relocated = false);
     void RelocateSegmentsTable(u32 base, u32 data_section0, u32 data_section1, u32& prev_data_section0);
@@ -295,7 +295,6 @@ void CROHeader::RelocateOffsets(u32 base) {
 }
 
 static void ApplyPatch(Patch* patch, u32 patch_base, u32 patch_address, u32* patch_address1 = nullptr) {
-
     if (!patch_address1)
         patch_address1 = &patch_address;
 
