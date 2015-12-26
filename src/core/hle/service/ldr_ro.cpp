@@ -299,7 +299,7 @@ bool CROHeader::VerifyAndRelocateOffsets(u32 base, u32 size) {
     u32 end = base + size;
 
     // Error if the magic is invalid
-    if (strcmp(magic, "CRO0") != 0)
+    if (memcmp(magic, "CRO0", 4) != 0)
         return false;
 
     // If these values are set the game might be trying to load the same CRO multiple times
