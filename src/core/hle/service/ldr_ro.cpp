@@ -370,109 +370,109 @@ bool CROHeader::VerifyAndRelocateOffsets(u32 base, u32 size) {
 
     if (name_offset) {
         name_offset += base;
-        if (name_offset >= end)
+        if (name_offset > end)
             return false;
     }
 
     if (code_offset) {
         code_offset += base;
-        if (code_offset >= end)
+        if (code_offset > end)
             return false;
     }
 
     if (unk_offset) {
         unk_offset += base;
-        if (unk_offset >= end)
+        if (unk_offset > end)
             return false;
     }
 
     if (module_name_offset) {
         module_name_offset += base;
-        if (module_name_offset >= end)
+        if (module_name_offset > end)
             return false;
     }
 
     if (segment_table_offset) {
         segment_table_offset += base;
-        if (segment_table_offset >= end)
+        if (segment_table_offset > end)
             return false;
     }
 
     if (export_table_offset) {
         export_table_offset += base;
-        if (export_table_offset >= end)
+        if (export_table_offset > end)
             return false;
     }
 
     if (unk1_offset) {
         unk1_offset += base;
-        if (unk1_offset >= end)
+        if (unk1_offset > end)
             return false;
     }
 
     if (export_strings_offset) {
         export_strings_offset += base;
-        if (export_strings_offset >= end)
+        if (export_strings_offset > end)
             return false;
     }
 
     if (export_tree_offset) {
         export_tree_offset += base;
-        if (export_tree_offset >= end)
+        if (export_tree_offset > end)
             return false;
     }
 
     if (unk2_offset) {
         unk2_offset += base;
-        if (unk2_offset >= end)
+        if (unk2_offset > end)
             return false;
     }
 
     if (import_patches_offset) {
         import_patches_offset += base;
-        if (import_patches_offset >= end)
+        if (import_patches_offset > end)
             return false;
     }
 
     if (import_table1_offset) {
         import_table1_offset += base;
-        if (import_table1_offset >= end)
+        if (import_table1_offset > end)
             return false;
     }
 
     if (import_table2_offset) {
         import_table2_offset += base;
-        if (import_table2_offset >= end)
+        if (import_table2_offset > end)
             return false;
     }
 
     if (import_table3_offset) {
         import_table3_offset += base;
-        if (import_table3_offset >= end)
+        if (import_table3_offset > end)
             return false;
     }
 
     if (import_strings_offset) {
         import_strings_offset += base;
-        if (import_strings_offset >= end)
+        if (import_strings_offset > end)
             return false;
     }
 
     if (unk3_offset) {
         unk3_offset += base;
-        if (unk3_offset >= end)
+        if (unk3_offset > end)
             return false;
     }
 
     if (relocation_patches_offset) {
         relocation_patches_offset += base;
-        if (relocation_patches_offset >= end)
+        if (relocation_patches_offset > end)
             return false;
     }
 
     if (unk4_offset) {
         unk4_offset += base;
-        if (unk4_offset >= end)
+        if (unk4_offset > end)
             return false;
     }
 
@@ -485,10 +485,10 @@ bool CROHeader::VerifyAndRelocateOffsets(u32 base, u32 size) {
         export_strings_offset + export_strings_num > end ||
         export_tree_offset + sizeof(ExportTreeEntry) * export_tree_num > end ||
         unk2_offset + sizeof(Unk2Patch) * unk2_num > end ||
-        import_patches_offset + sizeof(Patch) * import_patches_num ||
-        import_table1_offset + sizeof(ImportTableEntry) * import_table1_num ||
-        import_table2_offset + sizeof(ImportTableEntry) * import_table2_num ||
-        import_table3_offset + sizeof(ImportTableEntry) * import_table3_num ||
+        import_patches_offset + sizeof(Patch) * import_patches_num > end ||
+        import_table1_offset + sizeof(ImportTableEntry) * import_table1_num > end ||
+        import_table2_offset + sizeof(ImportTableEntry) * import_table2_num > end ||
+        import_table3_offset + sizeof(ImportTableEntry) * import_table3_num > end ||
         import_strings_offset + import_strings_num > end ||
         unk3_offset + sizeof(Unk3Patch) * unk3_num > end ||
         relocation_patches_offset + sizeof(Patch) * relocation_patches_num > end ||
@@ -647,7 +647,7 @@ static void ApplyUnk2Patches(CROHeader* header, u32 base) {
             u32 base_segment_offset = unk1_table_entry >> 4;
             SegmentTableEntry* base_segment = patch_cro->GetSegmentTableEntry(base_segment_id);
 
-            Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(base + table1_entry->patches_offset));
+            Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(table1_entry->patches_offset));
             ApplyListPatches(header, first_patch, base_segment->segment_offset + base_segment_offset);
         }
 
@@ -668,7 +668,7 @@ static void BackApplyUnk2Patches(CROHeader* header, u32 base, CROHeader* new_hea
     for (int i = 0; i < header->unk2_num; ++i) {
         Unk2Patch* entry = header->GetUnk2PatchEntry(i);
         char* old_cro_name = reinterpret_cast<char*>(Memory::GetPointer(entry->string_offset));
-        char* new_cro_name = reinterpret_cast<char*>(Memory::GetPointer(new_base + new_header->name_offset));
+        char* new_cro_name = reinterpret_cast<char*>(Memory::GetPointer(new_header->name_offset));
         if (strcmp(old_cro_name, new_cro_name) != 0)
             continue;
 
@@ -682,7 +682,7 @@ static void BackApplyUnk2Patches(CROHeader* header, u32 base, CROHeader* new_hea
             u32 base_segment_offset = unk1_table_entry >> 4;
             SegmentTableEntry* base_segment = patch_cro->GetSegmentTableEntry(base_segment_id);
 
-            Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(base + table1_entry->patches_offset));
+            Patch* first_patch = reinterpret_cast<Patch*>(Memory::GetPointer(table1_entry->patches_offset));
             ApplyListPatches(header, first_patch, base_segment->segment_offset + base_segment_offset);
         }
 
