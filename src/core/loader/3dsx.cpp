@@ -14,6 +14,7 @@
 #include "core/loader/elf.h"
 #include "core/loader/ncch.h"
 #include "core/memory.h"
+#include "core/loader/loader.h"
 
 #include "3dsx.h"
 
@@ -225,6 +226,11 @@ static THREEDSX_Error Load3DSXFile(FileUtil::IOFile& file, u32 base_addr, Shared
 
     code_set->entrypoint = code_set->code.addr;
     code_set->memory = std::make_shared<std::vector<u8>>(std::move(program_image));
+
+    Loader::ROMCodeStart = code_set->code.addr;
+    Loader::ROMCodeSize = code_set->code.size;
+    Loader::ROMReadOnlyDataStart = code_set->rodata.addr;
+    Loader::ROMReadOnlyDataSize = code_set->rodata.size;
 
     LOG_DEBUG(Loader, "code size:   0x%X", loadinfo.seg_sizes[0]);
     LOG_DEBUG(Loader, "rodata size: 0x%X", loadinfo.seg_sizes[1]);

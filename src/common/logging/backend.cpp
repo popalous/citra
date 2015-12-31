@@ -58,7 +58,8 @@ namespace Log {
         CLS(Render) \
         SUB(Render, Software) \
         SUB(Render, OpenGL) \
-        CLS(Loader)
+        CLS(Loader) \
+        CLS(BinaryTranslator)
 
 // GetClassName is a macro defined by Windows.h, grrr...
 const char* GetLogClassName(Class log_class) {
