@@ -781,7 +781,7 @@ static ResultCode CreateMemoryBlock(Handle* out_handle, u32 addr, u32 size, u32 
 static ResultCode GetSystemInfo(s64* out, u32 type, s32 param) {
     using Kernel::MemoryRegion;
 
-    LOG_TRACE(Kernel_SVC, "called process=0x%08X type=%u param=%d", process_handle, type, param);
+    LOG_TRACE(Kernel_SVC, "called type=%u param=%d", type, param);
 
     switch ((SystemInfoType)type) {
     case SystemInfoType::REGION_MEMORY_USAGE:
@@ -807,7 +807,7 @@ static ResultCode GetSystemInfo(s64* out, u32 type, s32 param) {
         }
         break;
     case SystemInfoType::KERNEL_ALLOCATED_PAGES:
-        LOG_ERROR(Kernel_SVC, "unimplemented GetSystemInfo type=2 param=%d", type, param);
+        LOG_ERROR(Kernel_SVC, "unimplemented GetSystemInfo type=2 param=%d", param);
         *out = 0;
         break;
     case SystemInfoType::KERNEL_SPAWNED_PIDS:
